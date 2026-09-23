@@ -1,0 +1,97 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Direction B: Representation-Space Reassignment (Intervention/Transport)}
+\label{sec:dirB}
+
+Direction B performs reassignment in a \emph{concept representation space} extracted from internal activations.
+Let $\Phi_{\theta}(v)\in\mathbb{R}^{d}$ be a concept prototype embedding for node $v$ under model $\theta$.
+
+\paragraph{Choice of concept representation $\Phi$.}
+We consider two practical instantiations:
+\begin{itemize}
+\item \textbf{Activation prototype:} $\Phi_{\theta}(v)$ is the mean of a fixed internal activation vector (e.g., a cross-attention context/value vector) collected under prompts $p\sim\mathcal{P}_v$.
+\item \textbf{SAE code prototype (optional):} train an SAE on the same activations, and let $\Phi_{\theta}(v)$ be the mean sparse code.
+\end{itemize}
+Both are compatible with Stable Diffusion; the SAE variant often yields a cleaner, more interpretable geometry.
+
+\paragraph{Target prototype via probabilistic anchors.}
+Using prototypes from the \emph{original} model,
+\begin{equation}
+r_v \triangleq \Phi_{\theta_0}(v),
+\qquad
+r_u^{\star} \triangleq \sum_{a\in\mathrm{A}(u)} \pi_{u\rightarrow a}\, r_a.
+\label{eq:target-proto}
+\end{equation}
+
+\paragraph{Intervention operator.}
+Let $y$ denote the internal activation vector used by $\Phi$ (or its SAE code).
+We learn a \emph{transport} operator $T(\pi)$ that depends on the anchor distribution:
+\begin{equation}
+\tilde{y} = T(\pi_{u\rightarrow \cdot})\, y,
+\qquad
+T(\pi) \triangleq \sum_{a\in\mathrm{A}(u)} \pi_{u\rightarrow a}\, T_a,
+\label{eq:transport}
+\end{equation}
+where each $T_a$ is a small trainable linear map (optionally low-rank) acting on the activation space.
+
+\paragraph{Prototype matching loss.}
+Define the post-intervention prototype for $u$ as
+\begin{equation}
+\Phi_{\theta_0,T}(u) \triangleq \mathbb{E}_{x_0,t,\epsilon}\ \mathbb{E}_{p\sim\mathcal{P}_u}\big[\tilde{y}\big].
+\end{equation}
+We train $T$ (and the GCN producing $\pi$) to match the target prototype:
+\begin{equation}
+\mathcal{L}_{\mathrm{proto}}(u) =
+\big\| \Phi_{\theta_0,T}(u) - r_u^{\star} \big\|_2^2.
+\label{eq:proto-loss}
+\end{equation}
+
+\paragraph{Preservation loss.}
+For retain concepts (or retain prompts) we constrain interventions to be identity:
+\begin{equation}
+\mathcal{L}_{\mathrm{pres}} =
+\mathbb{E}_{p\sim\mathcal{P}_{\mathrm{ret}}}\big[\|\tilde{y}-y\|_2^2\big].
+\label{eq:pres-loss}
+\end{equation}
+
+\paragraph{Final objective (Direction B).}
+\begin{equation}
+\min_{T,\,\mathrm{GCN}}
+\ \ \mathcal{L}_{\mathrm{proto}}(\cdot)
++ \lambda\,\mathcal{L}_{\mathrm{pres}}
+- \beta\,\mathcal{R}_{\mathrm{ent}}(\cdot)
++ \eta\,\sum_{a}\|T_a\|_F^2.
+\label{eq:objective-B}
+\end{equation}
+
+\subsection{Concept Space Analysis}
+\label{sec:space}
+
+To interpret unlearning as geometric deformation, we analyze prototypes $\{r_v\}_{v\in V}$ before and after unlearning/intervention.
+We report (i) reassignment error $\|r_u' - r_u^{\star}\|$, (ii) neighborhood distortion for retain regions,
+\begin{equation}
+\Delta_{\mathrm{retain}} \triangleq
+\mathbb{E}_{(v,w)\in \mathcal{E}_{\mathrm{retain}}}
+\big|d(r_v',r_w') - d(r_v,r_w)\big|,
+\end{equation}
+and (iii) visualizations (PCA/UMAP) of trajectories $r_u \rightarrow r_u'$ relative to anchor barycenters.
+
+\begin{algorithm}[t]
+\caption{Probabilistic Concept Reassignment via Graph-Guided Anchors}
+\label{alg:main}
+\begin{algorithmic}[1]
+\REQUIRE Graph $G=(V,E)$, target concept $u$, prompt sets $\{\mathcal{P}_v\}_{v\in V}$, retain prompts $\mathcal{P}_{\mathrm{ret}}$
+\STATE Compute node embeddings $\{z_v\}$ using GCN (Sec.~\ref{sec:gcn})
+\STATE Construct anchor candidates $\mathrm{A}(u)$ using Eq.~\eqref{eq:anchor-set-leaf} or Eq.~\eqref{eq:anchor-set-nonleaf}
+\STATE Compute reassignment distribution $\pi_{u\rightarrow a}$ using Eq.~\eqref{eq:pi}
+\IF{Direction A (LoRA/ESD)}
+    \STATE Form mixture teacher $\epsilon_{\mathrm{mix}}$ by Eq.~\eqref{eq:eps-mix}
+    \STATE Update $\theta'$ by minimizing Eq.~\eqref{eq:objective-A}
+\ELSE
+    \STATE Compute prototypes $\{r_v\}$ and target barycenter $r_u^\star$ by Eq.~\eqref{eq:target-proto}
+    \STATE Learn transport $T(\pi)$ by minimizing Eq.~\eqref{eq:objective-B}
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+

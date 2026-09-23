@@ -1,0 +1,183 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2027_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+% Recommended, but optional, packages for figures and better typesetting:p
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2025} with \usepackage[nohyperref]{icml2025} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% For theorems and such
+\usepackage{amsmath}
+% \DeclareMathOperator*{\argmin}{arg\,min}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{xcolor}
+\usepackage{comment}
+\usepackage{amssymb}
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\crefname{assumption}{Assumption}{Assumptions}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+
+\newenvironment{squishitemize}
+{\begin{list}{\textbullet}{%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parsep}{0pt}%
+    \setlength{\topsep}{0pt}%
+    \setlength{\parskip}{0pt} %
+    \setlength{\labelwidth}{.5in}%
+    \setlength{\labelsep}{0.05in} %
+    \setlength{\leftmargin}{.15in} %
+    \renewcommand{\labelitemi}{\textbullet}}}
+  {\end{list}}
+
+\newenvironment{squishenumerate}
+  {\begin{list}{\arabic{enumi}.}{%
+    \usecounter{enumi}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parsep}{0pt}%
+    \setlength{\topsep}{0pt}%
+    \setlength{\parskip}{0pt}%
+    \setlength{\labelwidth}{.5in}%
+    \setlength{\labelsep}{0.05in}%
+    \setlength{\leftmargin}{.2in}}}
+  {\end{list}}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+% \usepackage[textsize=tiny]{todonotes}
+
+\title{You Can’t Have It Both Ways:
+Concept Entanglement Limits Diffusion Model Unlearning}
+
+\newif\ifcomments
+\commentstrue        % show comments
+% \commentsfalse     % hide comments (e.g., for submission)
+
+
+\newcommand{\ali}[1]{\textcolor{orange}{[ali: #1]}}
+\newcommand{\varun}[1]{\textcolor{red}{[Varun: #1]}}
+\newcommand{\yian}[1]{\textcolor{blue}{[yian: #1]}}
+\newcommand{\hs}[1]{\textcolor{violet}{[hari: #1]}}
+\author{
+Anonymous Authors
+}
+\begin{document}
+\maketitle
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+
+
+\input{sections/00Abstract}
+\input{sections/01Introduction}
+\input{sections/02Related}
+\input{sections/03Motivation}
+\input{sections/04Proof}
+\input{sections/05Experiment}
+\input{sections/06Discussion}
+\input{sections/07Limitation}
+\subsection*{AI use statement}
+
+(This section is \textbf{required} and does not count toward the page limit.)
+
+In this work, we used generative AI tools for [tasks with required disclosure].
+We have not used generative AI tools for [other tasks with required disclosure],
+and [the rest of the required disclosure tasks] are not applicable to this work.
+Additionally, we used generative AI tools for [tasks with recommended
+disclosure]. We have reviewed all AI-assisted work. [Elaborate. For example, “we
+checked LLM-generated research ideas for potential plagiarism through a manual
+literature survey”, “LLM-generated code was verified and tested for correctness
+by 2 authors”, etc.]. We take responsibility for the final content of this work,
+including text, claims or artifacts produced with the aid of generative AI.
+
+See the ICLR 2027 AI Policy for Authors for more details. This statement should
+not be more than 1 page.
+
+\subsection*{Ethics statement}
+
+(This section is \textbf{recommended} and does not count toward the page limit.)
+
+If authors feel that their paper submission raises questions regarding the Code
+of Ethics, they are encouraged to include a paragraph of Ethics Statement (at
+the end of the main text before references) to address potential concerns where
+appropriate. Topics include, but are not limited to, studies that involve human
+subjects, practices to data set releases, potentially harmful insights,
+methodologies and applications, potential conflicts of interest and sponsorship,
+discrimination/bias/fairness concerns, privacy and security issues, legal
+compliance, and research integrity issues (e.g., IRB, documentation, research
+ethics). This statement should not be more than 1 page.
+
+\subsection*{Reproducibility statement}
+
+(This section is \textbf{recommended} and does not count toward the page limit.)
+
+It is important that the work published in ICLR is reproducible. Authors are
+strongly encouraged to include a paragraph-long Reproducibility Statement at the
+end of the main text (before references) to discuss the efforts that have been
+made to ensure reproducibility. This paragraph should not itself describe
+details needed for reproducing the results, but rather reference the parts of
+the main paper, appendix, and supplemental materials that will help with
+reproducibility. For example, for novel models or algorithms, a link to an
+anonymous downloadable source code can be submitted as supplementary materials;
+for theoretical results, clear explanations of any assumptions and a complete
+proof of the claims can be included in the appendix; for any datasets used in
+the experiments, a complete description of the data processing steps can be
+provided in the supplementary materials. Each of the above are examples of
+things that can be referenced in the reproducibility statement.
+
+\appendix
+\newpage
+\bibliography{references}   % or whatever your .bib filename is
+\bibliographystyle{iclr2027_conference}
+\newpage
+\appendix
+{\large \begin{center} {\bf Appendix} \end{center}}
+\input{sections/app/01}
+\input{sections/app/02}
+\input{sections/app/03}
+\input{sections/app/04}
+\input{sections/app/05}
+\input{sections/app/06}
+\input{sections/app/07}
+\input{sections/app/08}
+\input{sections/app/09}
+\input{sections/app/10}
+\input{sections/app/11}
+\input{sections/app/rebuttal}
+
+
+\end{document}

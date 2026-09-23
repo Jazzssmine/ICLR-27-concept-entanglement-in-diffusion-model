@@ -1,0 +1,136 @@
+\section{Interpreting Existing Methods Through the Trade-off Lens}
+\label{app:method_analysis}
+% Our theoretical framework provides a unified lens through which to interpret the empirical behavior of existing unlearning methods. We discuss three representative cases. The discussion here is interpretive rather than derivational: we identify which point on the Pareto frontier predicted by~\cref{thm:tradeoff} each method empirically occupies, and connect this to the method's mechanism.
+\paragraph{The role of $\kappa$: why the trade-off severity varies.}
+The overlap coefficient $\kappa(c_u,\rho)$ determines the slope of the Pareto frontier and hence how severe the trade-off is for a given target concept. Concepts embedded in semantically dense neighborhoods (e.g., \texttt{horse} amongother animals, or  \texttt{Monet} among Impressionist styles) have large $\kappa$ and face a steep trade-off. Concepts that are semantically isolated have small $\kappa$ and can be erased with less collateral damage. This provides actionable guidance: \emph{the difficulty of unlearning a concept depends
+not only on the method but on the semantic density of its neighborhood}.
+
+\begin{remark}[Tightness of the bound]
+\label{rem:tightness}
+The bound in Theorem~\ref{thm:tradeoff} is tight when the overlap region $\mathcal{O}$ is exactly a $\kappa(c_u,\rho$) fraction of $\mathcal{R}_{c_u}^{(\rho)}$ and the displacement field induced by the unlearning edit is uniform over $\mathcal{R}_{c_u}^{(\rho)}$. In practice, displacement is typically non-uniform---methods may suppress some directions more aggressively than others---in which case the bound is conservative. Characterizing the displacement geometry more precisely is an interesting direction for future work.
+\end{remark}
+\Cref{app:method_analysis} applies this framing to specific unlearning methods, including STEREO, SAeUron, and the broader fine-tuning vs.\ inference-time distinction, interpreting their empirical behavior as different operating points on the predicted Pareto frontier.
+
+\paragraph{Reading existing methods as operating points on the frontier.}
+We now apply this framing to specific unlearning methods, 
+interpreting their empirical behavior as distinct operating points on the predicted Pareto frontier. The discussion is interpretive rather than derivational: we identify where on the frontier each method sits and connect this to the method's mechanism.
+\begin{remark}[Why STEREO achieves robustness at the cost of retention]
+\label{rem:stereo}
+STEREO~\citep{srivatsan2025stereo} achieves robustness by learning adversarial token embeddings $v_1^*, v_2^*$ that lie near the hardest-to-suppress directions of $\mathcal{R}_{c_u}$, then using a compositional objective to suppress the entire subspace spanned by these directions. This broad suppression corresponds to a large displacement $\Delta$ across $\mathcal{R}_{c_u}$, which by Theorem~\ref{thm:tradeoff} directly implies large collateral displacement in $\mathcal{R}_{c'}$ for all neighbors $c'$ with $\kappa(c_u,\rho) > 0$. Our empirical observation that \texttt{donkey} and \texttt{zebra} generation degrades after \texttt{horse} erasure with STEREO (\Cref{sec:motivation}) is consistent with this prediction.
+\end{remark}
+
+\begin{remark}[Why SAeUron preserves neighbors but remains vulnerable]
+\label{rem:saeuron}
+SAeUron~\citep{cywinski2025saeuron} achieves unlearning by identifying a small number of sparse autoencoder features ($\tau_c$ features per concept) that are highly specific to the target concept, then ablating only those features during inference. Because the intervention is restricted to a sparse set of concept-specific features rather than applied across the full activation region $\mathcal{R}_{c_u}$, the effective displacement $\Delta$ is small and concentrated in a low-dimensional subspace. This limits collateral damage to neighbors (small $\gamma$), explaining SAeUron's superior retention performance in sequential unlearning. However, the sparsity of the intervention also means that portions of $\mathcal{R}_{c_u}$ remain unsuppressed---precisely the portions reachable through indirect correlated prompts, consistent with the concept leakage observed in~\cref{sec:motivation}. In the language of our framework, SAeUron achieves small $\gamma$ at the cost of large $\varepsilon$.
+\end{remark}
+
+\begin{remark}[Fine-tuning breadth determines the operating point]
+\label{rem:finetuning}
+More generally, the distinction between fine-tuning methods and inference-time methods maps onto different strategies for navigating the $(\varepsilon, \gamma)$ frontier. Fine-tuning methods (ESD, SalUn, AdvUnlearn, STEREO) modify model weights, which can displace activations broadly across $\mathcal{R}_{c_u}$ and achieve small $\varepsilon$, but at the cost of larger $\gamma$ due to the breadth of weight perturbation. Inference-time methods (SPM, SEOT, SAeUron) intervene on a narrow set of activations or embeddings, achieving small $\gamma$ but leaving larger $\varepsilon$ because the intervention does not cover the full activation region. This mechanistic distinction is a direct consequence of Theorem~\ref{thm:tradeoff}: the effective displacement $\Delta$ is the lever, and methods differ in how broadly they apply it.
+\end{remark}
+
+
+% \section{Proof of~\cref{thm:tradeoff}}
+% \label{app:proof}
+% We restate the theorem and provide the full proof. Throughout, distances in $\mathcal{Z}$ are measured in $\ell_2$ norm on the mean-pooled activation space introduced in~\cref{app:kappa_estimation}; the relationship between $\ell_2$ and cosine metrics on the unit sphere, and its implication for the Lipschitz constant $L$, is discussed in the remark at the end of this section.
+
+% \begin{theorem}[Robustness--Retention Tradeoff, restated]
+% Let~\cref{asm:lip} and~\cref{asm:edit} hold. Suppose $\epsilon_{\hat\theta}$ achieves $\varepsilon$-robust unlearning of $c_u$
+% (\cref{def:robust}). Then for any neighbor concept $c' \in \mathcal{N}_\delta(c_u)$ whose activation region satisfies
+% $\mathcal{R}_{c'}^{(\rho)} \cap \mathcal{R}_{c_u}^{(\rho)} \neq
+% \emptyset$, the neighbor preservation error is lower bounded by
+% \begin{equation}
+%     \bigl\|\Phi_{\hat\theta}(p_{c'}) -
+%     \Phi_{\theta^*}(p_{c'})\bigr\|_2
+%     \;\geq\;
+%     \kappa(c_u,\rho) \cdot \Delta
+%     \;-\; \delta,
+% \end{equation}
+% and consequently, $\gamma$-concept preservation (\cref{def:neighbor}) requires
+% \begin{equation}
+%     \gamma \;\geq\; \kappa(c_u,\rho)\cdot\frac{1-\varepsilon}{L}
+%     \;-\; \delta.
+% \end{equation}
+% In particular, achieving both $\varepsilon$-robustness and $\gamma$-neighbor preservation simultaneously requires
+% \begin{equation}
+%     \varepsilon \;\geq\; 1 - \frac{L(\gamma + \delta)}{\kappa(c_u,\rho)}.
+% \end{equation}
+% \end{theorem}
+
+% \begin{proof}
+% We proceed in three steps.
+
+% \medskip
+% \noindent\textbf{Step 1: Required activation displacement for $\varepsilon$-robustness.}
+
+% By~\cref{asm:lip}, for any prompt $p$ such that $\Phi_{\theta}(p) \in \mathcal{R}_{c_u}$, the original model generates concept $c_u$ with probability at least $1 - \varepsilon_0$ for some baseline $\varepsilon_0 < \varepsilon$. To reduce this probability below $\varepsilon$ in the erased model, the activation must be displaced by at least
+% \begin{equation}
+%     \bigl\|\Phi_{\hat\theta}(p) - \Phi_{\theta}(p)\bigr\|_2
+%     \;\geq\; \frac{1 - \varepsilon}{L} \;=:\; \Delta,
+% \end{equation}
+% which is exactly the condition in~\cref{asm:edit}. This establishes that $\varepsilon$-robustness imposes a uniform displacement lower bound $\Delta$ on all activations within $\mathcal{R}_{c_u}$.
+
+% \medskip
+% \noindent\textbf{Step 2: Displacement propagates to overlapping
+% neighbor regions.}
+
+% Let $c' \in \mathcal{N}_\delta(c_u)$ and let
+% $\mathcal{O} = \mathcal{R}_{c_u}^{(\rho)} \cap \mathcal{R}_{c'}^{(\rho)}$ denote the overlap region. By hypothesis,
+% $\mathcal{O} \neq \emptyset$.
+
+% Since $\mathcal{O} \neq \emptyset$, there exist points $h^* \in \mathcal{O}$ that lie within distance $\rho$ of both $\mathcal{R}_{c_u}$ and $\mathcal{R}_{c'}$ (by definition of the $\rho$-fattening). Because $\mathcal{O} \subseteq \mathcal{R}_{c_u}^{(\rho)}$, the unlearning edit displaces activations at all such points by at least $\Delta$ (from Step~1).
+
+% Now, $p_{c'}$ is chosen such that $\Phi_{\theta}(p_{c'}) \in \mathcal{R}_{c'}$, and the overlap point $h^*$ satisfies $\|h^* - \Phi_{\theta}(p_{c'})\|_2 \leq \rho + d_{\mathcal{H}}(\mathcal{R}_{c_u}, \mathcal{R}_{c'})$.
+% The displacement field induced by the unlearning edit acts across the connected region $\mathcal{R}_{c_u}^{(\rho)}$; since a $\kappa(c_u,\rho)$ fraction of this region overlaps with $\mathcal{R}_{c'}^{(\rho)}$, the displacement propagates to
+% $\Phi_{\theta}(p_{c'})$ with magnitude attenuated by the overlap
+% fraction, yielding
+% \begin{equation}
+%     \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta}(p_{c'})
+%     \bigr\|_2
+%     \;\geq\;
+%     \kappa(c_u,\rho) \cdot \Delta
+%     \;-\; d_{\mathcal{H}}(\mathcal{R}_{c_u}, \mathcal{R}_{c'}).
+% \end{equation}
+% By~\cref{def:overlap}, $d_\mathcal{H}(\mathcal{R}_{c_u},\mathcal{R}_{c'})
+% < \delta$ for all $c' \in \mathcal{N}_\delta(c_u)$. Substituting the
+% definition of $\kappa(c_u,\rho)$ from~\cref{def:overlap} yields
+% \begin{equation}
+%     \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta^*}(p_{c'})
+%     \bigr\|_2
+%     \;\geq\;
+%     \kappa(c_u,\rho) \cdot \Delta \;-\; \delta.
+% \end{equation}
+% \medskip
+% \noindent\textbf{Step 3: Deriving the tradeoff inequality.}
+
+% Substituting $\Delta = (1-\varepsilon)/L$ from Step 1:
+% \begin{equation}
+%     \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta}(p_{c'})
+%     \bigr\|_2
+%     \;\geq\;
+%     \kappa(c_u,\rho) \cdot \frac{1-\varepsilon}{L} \;-\; \delta.
+% \end{equation}
+% For $\gamma$-neighbor preservation (\cref{def:overlap})
+% to hold, we need the left-hand side to be less than $\gamma$, which
+% requires
+% \begin{equation}
+%     \gamma \;\geq\;
+%     \kappa(c_u,\rho) \cdot \frac{1-\varepsilon}{L} \;-\; \delta.
+% \end{equation}
+% Rearranging for $\varepsilon$:
+% \begin{equation}
+%     \kappa(c_u,\rho) \cdot \frac{1-\varepsilon}{L}
+%     \;\leq\; \gamma + \delta
+%     \quad\Longrightarrow\quad
+%     1 - \varepsilon \;\leq\;
+%     \frac{L(\gamma+\delta)}{\kappa(c_u,\rho)}
+%     \quad\Longrightarrow\quad
+%     \varepsilon \;\geq\;
+%     1 - \frac{L(\gamma+\delta)}{\kappa(c_u,\rho)}.
+% \end{equation}
+% This completes the proof.
+% \end{proof}
+
+% \paragraph{Remark on metric compatibility.}
+% The proof uses the $\ell_2$ metric throughout because~\cref{asm:lip} is stated in $\ell_2$. Our $\hat\kappa$ estimator (\cref{app:kappa_estimation}) instead uses cosine distance to characterize region membership. These two choices are compatible: on unit-normalized activations, $\|a - b\|_2^2 = 2\,d_{\cos}(a, b)$, so an $L$-Lipschitz function in $\ell_2$ is $(L\sqrt{2})$-Lipschitz in cosine distance, and the set-theoretic objects appearing in the bound---the fattened regions $\mathcal{R}_c^{(\rho)}$, the overlap $\mathcal{O}$, the overlap fraction $\kappa$---retain the same interpretation under either metric up to this constant factor, which can be absorbed into $L$. Consequently, estimating $\kappa$ via cosine distance and applying the bound with an $\ell_2$ Lipschitz constant is internally consistent.
+ 

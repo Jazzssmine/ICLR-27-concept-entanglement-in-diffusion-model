@@ -1,0 +1,145 @@
+\section{Problem Formlation and Threat Model}
+\label{sec:threat_model}
+
+\varun{this really isn't a method section? it is mostly establishing notation and formalism?}
+
+\varun{this is not a good/precise definition.}
+
+
+\varun{you probably want to provide more details on how these models are trained, as that knowledge is essential for understanding the types of attacks you propose}
+
+\subsection{Preliminaries}
+
+We consider a pretrained text-to-image latent diffusion model $D_{\theta}$ with parameters $\theta$. 
+Given a text prompt $p \in \mathcal{P}$, the model generates an image $x \in \mathcal{X}$ by sampling from a conditional distribution:
+
+\begin{equation}
+p_{\theta}(x \mid p).
+\end{equation}
+
+In latent diffusion models \cite{rombach2022high}, an image $x$ is first encoded into a latent representation $z = E(x)$ using a pretrained variational autoencoder (VAE). 
+The diffusion model operates in the latent space $\mathcal{Z}$ and learns to reverse a forward noising process. 
+Specifically, given a noisy latent $z_t$ at diffusion timestep $t$, a U-Net denoiser $\epsilon_{\theta}$ is trained to predict the noise $\epsilon$ added to the latent:
+
+\begin{equation}
+\mathcal{L}_{\text{LDM}} =
+\mathbb{E}_{x,\epsilon,t}
+\left[
+\left\|
+\epsilon - \epsilon_{\theta}(z_t, t, e_p)
+\right\|_2^2
+\right],
+\end{equation}
+
+where $\epsilon \sim \mathcal{N}(0,I)$ and $e_p$ is the embedding of prompt $p$.
+
+The text prompt is encoded by a text encoder $f_t$ into a continuous embedding:
+
+\begin{equation}
+e_p = f_t(p) \in \mathbb{R}^d,
+\end{equation}
+
+which conditions the denoising network through cross-attention layers during generation.
+
+We denote by $c \in \mathcal{C}$ a visual concept (e.g., \textit{horse}, \textit{van bicycle}, or a specific identity). 
+Concepts are typically associated with a distribution of prompts $\mathcal{P}_c \subseteq \mathcal{P}$ whose generated images depict that concept.
+\subsection{Concept Unlearning Objective}
+
+Let $D_{\theta}$ denote a pretrained diffusion model and let $c \in \mathcal{C}$ be a target concept that must be removed from the model. 
+Concept unlearning aims to produce an updated model $D_{\theta'}$ such that the model no longer generates images depicting concept $c$, while preserving its ability to generate other content.
+
+Formally, let $\mathcal{P}_c$ denote the distribution of prompts associated with concept $c$. 
+Concept unlearning seeks parameters $\theta'$ satisfying two objectives.
+
+First, the probability that generated images contain the target concept should be minimized for prompts referring to the concept:
+
+\begin{equation}
+\Pr_{x \sim p_{\theta'}(\cdot \mid p)}[c \in x] \approx 0,
+\quad \forall p \sim \mathcal{P}_c.
+\end{equation}
+
+Second, the updated model should preserve its original generation behavior for prompts unrelated to the concept:
+
+\begin{equation}
+p_{\theta'}(x \mid p) \approx p_{\theta}(x \mid p),
+\quad \forall p \notin \mathcal{P}_c.
+\end{equation}
+
+Existing diffusion unlearning methods typically operationalize this objective by suppressing the influence of tokens associated with the concept during fine-tuning or inference. 
+This formulation implicitly assumes that the visual concept can be localized to specific lexical tokens in the prompt representation.
+
+
+\subsection{Adversarial Threat Model: Contextual Concept Leakage}
+
+We now define an adversarial setting in which an attacker seeks to bypass unlearning.
+
+\paragraph{Adversary Goal.}
+Generate an image containing concept $c$ using the unlearned model $\mathcal{D}_{\theta'}$ without explicitly referencing $t_c$.
+
+\paragraph{Adversary Strategy.}
+Construct a prompt
+\begin{equation}
+p_{\text{adv}} = \{t_1, \dots, t_k\}, \quad \text{where } S_c \subseteq p_{\text{adv}}, \; t_c \notin p_{\text{adv}}.
+\end{equation}
+
+\paragraph{Failure Condition.}
+We say unlearning fails if
+\begin{equation}
+\Pr_{x \sim p_{\theta'}(\cdot \mid p_{\text{adv}})}[c \in x] > \epsilon,
+\end{equation}
+for a non-negligible threshold $\epsilon$, despite successful suppression for prompts containing $t_c$.
+
+This definition captures \emph{contextual concept leakage}: the persistence of an unlearned concept through correlated context tokens rather than explicit mention.
+
+\begin{comment}
+\subsection{Preliminaries}
+
+Let $\mathcal{D}_\theta$ denote a pretrained text-to-image diffusion model with parameters $\theta$. The model defines a conditional distribution over images $x \in \mathcal{X}$ given a text prompt $p \in \mathcal{P}$:
+\begin{equation}
+p_\theta(x \mid p).
+\end{equation}
+
+The prompt $p$ is encoded by a text encoder $f_t$ into a continuous embedding:
+\begin{equation}
+\mathbf{e}_p = f_t(p) \in \mathbb{R}^d,
+\end{equation}
+which conditions the denoising process of the diffusion model.
+
+We denote by $c \in \mathcal{C}$ a semantic visual concept (e.g., \emph{horse}). A concept may be associated with a particular word token $t_c$, but the model may represent that concept using multiple correlated tokens rather than a single identifier. 
+\subsection{Standard Concept Unlearning Objective}
+
+Given a target concept $c$, existing diffusion unlearning methods aim to produce updated parameters $\theta'$ such that generation conditioned on prompts containing the concept token no longer yields images depicting $c$. Formally, the objective can be expressed as:
+\begin{equation}
+p_{\theta'}(x \mid p) \approx p_\theta(x \mid p), \quad \forall p \not\ni t_c,
+\end{equation}
+while enforcing
+\begin{equation}
+\Pr_{x \sim p_{\theta'}(\cdot \mid p)}[c \in x] \approx 0, \quad \forall p \ni t_c.
+\end{equation}
+
+This formulation implicitly assumes that the contribution of the concept token $t_c$ to the text embedding $\mathbf{e}_p$ is separable from the rest of the prompt.
+
+    \subsection{Bag-of-Words Representations and Concept Entanglement}
+
+\varun{i think this should be a motivating experiment section? and highlight how earlier phenomenon were shown for VLMs but now you see this for diffusion too}
+
+\varun{and before this, you want to present an analysis on the captions used in the training of these models based on the pos tagging stuff we have discussed a while ago}
+
+Empirical evidence suggests that many VLM text encoders do not encode prompts compositionally, but instead approximate a bag-of-words aggregation~\cite{yuksekgonul2022and}. We model this behavior as:
+\begin{equation}
+f_t(p) \approx \sum_{t \in p} \phi(t),
+\end{equation}
+where $\phi(t)$ denotes the embedding of token $t$.
+
+Let $S_c = \{t_1, \dots, t_k\}$ be a set of tokens that frequently co-occur with concept $c$ in the training data. Under a bag-of-words representation, the expected text embedding conditioned on the presence of $t_c$ may be similar to that conditioned on the presence of $S_c$:
+\begin{equation}
+\mathbb{E}[\mathbf{e}_p \mid t_c \in p]
+\;\approx\;
+\mathbb{E}[\mathbf{e}_p \mid S_c \subseteq p].
+\end{equation}
+
+As a result, the visual concept $c$ is encoded not as an independent semantic factor, but as a distributed pattern across multiple correlated tokens.
+
+
+
+\end{comment}

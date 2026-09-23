@@ -1,0 +1,240 @@
+\section{Candidate Directions for Optimization-Based Prompt Recovery}
+\label{sec:candidate_attack_directions}
+
+This section outlines several candidate directions for a novel optimization-based prompt recovery attack. The common goal is to move beyond shallow bag-of-words search and instead design attacks that probe whether concept unlearning removes the target concept itself or merely suppresses direct lexical triggers. All directions below are intended as \emph{research proposals} to guide method development.
+
+\subsection{Direction I: Graph-Guided Factorized Concept Recovery}
+\label{subsec:graph_guided_recovery}
+
+A natural hypothesis is that concept unlearning suppresses the target token more easily than the broader semantic factors that compose the concept. For example, even if the token \texttt{horse} is suppressed, the model may still retain correlated factors such as \emph{cowboy}, \emph{ranch}, \emph{saddle}, \emph{riding}, or \emph{pasture}. This motivates a structured attack that searches over \emph{factor compositions} rather than raw prompt strings.
+
+\paragraph{Core idea.}
+For a target concept $c$, we construct a structured semantic neighborhood containing factors that are strongly associated with $c$. These factors may include:
+\begin{itemize}
+    \item \textbf{Roles}: e.g., cowboy, rider, knight, jockey;
+    \item \textbf{Scenes}: e.g., ranch, stable, pasture, battlefield, racetrack;
+    \item \textbf{Objects}: e.g., saddle, reins, carriage, fence;
+    \item \textbf{Actions}: e.g., riding, jumping, galloping, pulling;
+    \item \textbf{Neighbor concepts}: e.g., deer, zebra, giraffe;
+    \item \textbf{Styles or domains}: e.g., comic, realistic, medieval, western.
+\end{itemize}
+The attack then composes these factors into indirect prompts that can recover the erased concept without necessarily naming it explicitly.
+
+\subsubsection{Stage 1: Construct a Concept Factor Graph}
+\label{subsubsec:stage1_graph}
+
+For each target concept $c$, we define a concept factor graph
+\[
+\mathcal{G}_c = (\mathcal{V}_c, \mathcal{E}_c),
+\]
+where nodes in $\mathcal{V}_c$ correspond to semantic factors associated with $c$, and edges in $\mathcal{E}_c$ encode association strength or compatibility between factors. A node may represent a role, scene, object, action, neighboring concept, or style. Edge weights may reflect semantic relatedness, co-occurrence, or compositional compatibility.
+
+A practical design is to avoid constructing a heavy graph from scratch for every concept. Instead, one can maintain a \emph{shared semantic factor repository} and extract a lightweight target-conditioned subgraph for concept $c$. This would reduce concept-specific preprocessing while preserving the structure needed for optimization.
+
+\paragraph{Possible sources for graph construction.}
+Candidate sources for factor nodes and edge weights include:
+\begin{itemize}
+    \item text--image embedding similarity (e.g., CLIP);
+    \item caption or corpus co-occurrence statistics;
+    \item large language model proposals for associated roles/scenes/actions/objects;
+    \item existing lexical or commonsense resources;
+    \item captions generated from the base text-to-image model.
+\end{itemize}
+
+The graph is intended to capture {distributed semantic access paths} to the target concept. If unlearning fails to remove all such access paths, then optimizing over factor combinations may recover the concept even when direct prompting fails.
+
+\subsubsection{Stage 2: Generate Compositional Prompts from Factor Tuples}
+\label{subsubsec:stage2_generation}
+
+Rather than optimizing directly over token strings, we search over factor tuples
+\[
+z = (r, s, o, a, t),
+\]
+where $r$ denotes a role, $s$ a scene, $o$ an object, $a$ an action, and $t$ a style or template. A tuple $z$ is then decoded into a natural-language prompt $p(z)$ using either hand-designed templates or a constrained language model.
+
+Example prompt realizations include:
+\begin{itemize}
+    \item \emph{a dusty western ranch scene with a rider near a wooden fence}
+    \item \emph{a medieval battlefield with a knight holding reins}
+    \item \emph{comic panel of a jockey in an open pasture}
+\end{itemize}
+
+This design makes the search space more structured and interpretable than direct prompt search. It also naturally supports \emph{multi-cue attacks} in which several individually weak cues combine to recover the target concept.
+
+\subsubsection{Stage 3: Optimize in Factor Space}
+\label{subsubsec:stage3_optimization}
+
+Let $G_u$ denote the concept-unlearned diffusion model and let $c$ denote the target concept. For a factor tuple $z$, let $p(z)$ be its decoded prompt and let $I(z) = G_u(p(z))$ be the generated image. We define an objective over factor compositions:
+\begin{equation}
+J(z;c)
+=
+S_{\mathrm{recover}}(I(z), c)
++
+\alpha S_{\mathrm{coherence}}(z)
++
+\beta S_{\mathrm{indirect}}(z)
++
+\gamma S_{\mathrm{diversity}}(z).
+\label{eq:graph_guided_objective}
+\end{equation}
+
+Here:
+\begin{itemize}
+    \item $S_{\mathrm{recover}}(I(z), c)$ measures how strongly the generated image expresses the target concept $c$;
+    \item $S_{\mathrm{coherence}}(z)$ measures whether the chosen factors form a plausible semantic composition;
+    \item $S_{\mathrm{indirect}}(z)$ encourages indirect prompts and can penalize explicit mention of the target concept depending on the threat model;
+    \item $S_{\mathrm{diversity}}(z)$ encourages exploration of distinct semantic recovery pathways.
+\end{itemize}
+
+The attack then solves:
+\begin{equation}
+z^* = \arg\max_{z \in \mathcal{Z}_c} J(z;c),
+\label{eq:graph_guided_attack}
+\end{equation}
+where $\mathcal{Z}_c$ denotes the space of admissible factor tuples for target concept $c$.
+
+\subsubsection{Candidate Algorithm A: Evolutionary Search over Factor Tuples}
+\label{subsubsec:algorithmA}
+
+A practical candidate is to optimize Eq.~\ref{eq:graph_guided_attack} using evolutionary search. Each candidate is a factor tuple $z$. At each generation:
+\begin{enumerate}
+    \item Sample or maintain a population of candidate tuples;
+    \item Decode each tuple into a prompt and generate an image from the unlearned model;
+    \item Score each tuple using Eq.~\ref{eq:graph_guided_objective};
+    \item Select high-scoring tuples as parents;
+    \item Apply \emph{mutation} (e.g., replace one factor with a nearby node in the graph) and \emph{crossover} (combine factors from two parent tuples);
+    \item Repeat until convergence or query budget exhaustion.
+\end{enumerate}
+
+
+\subsubsection{Candidate Algorithm B: Monte Carlo Tree Search over Semantic Expansions}
+\label{subsubsec:algorithmB}
+
+A more ambitious candidate is to formulate the search as Monte Carlo Tree Search (MCTS). A node in the search tree represents a \emph{partial factor composition}; each expansion adds a new semantic factor (e.g., a scene, role, or object). A rollout completes the factor tuple, decodes it into a prompt, queries the unlearned model, and receives reward according to Eq.~\ref{eq:graph_guided_objective}.
+
+\paragraph{Advantages.}
+MCTS may offer a more principled exploration--exploitation tradeoff than simple evolutionary search and can naturally discover \emph{multi-hop} semantic pathways to concept recovery.
+
+\paragraph{Tradeoff.}
+This option is algorithmically attractive but more engineering-heavy than evolutionary search. It may be worthwhile if the goal is to emphasize methodological novelty and pathway discovery.
+
+\subsection{Direction II: Base-Model-as-Teacher Recovery Attack}
+\label{subsec:teacher_attack}
+
+A more ambitious idea is to use the original pretrained diffusion model $G_b$ as a \emph{teacher} for identifying promising recovery prompts. The key intuition is that if a prompt composition strongly evokes the target concept in the original model, then it represents a plausible semantic access path. A robust unlearning method should remove that access path from the unlearned model $G_u$ as well.
+
+\paragraph{Core idea.}
+For each candidate prompt $p$, generate outputs from both the base model $G_b$ and the unlearned model $G_u$. Prompts that strongly induce the target concept in the base model provide a high-quality prior over semantically meaningful recovery pathways. The attack then prioritizes those pathways when probing the unlearned model.
+
+\paragraph{Teacher-guided scoring.}
+One possible scoring function is:
+\begin{equation}
+J_{\mathrm{teacher}}(p;c)
+=
+S(G_u(p), c)
++
+\lambda S(G_b(p), c),
+\label{eq:teacher_score_simple}
+\end{equation}
+where $S(\cdot,c)$ measures target concept presence. This favors prompts that both remain effective on the unlearned model and are known to be semantically associated with the target concept under the base model.
+
+A stricter variant is to search only over prompts satisfying
+\[
+S(G_b(p), c) \ge \tau,
+\]
+for some threshold $\tau$, and then maximize recovery on the unlearned model:
+\begin{equation}
+p^* = \arg\max_{p:\; S(G_b(p),c)\ge\tau} S(G_u(p), c).
+\label{eq:teacher_filtered_attack}
+\end{equation}
+
+This design makes the attack more semantically grounded: instead of searching blindly for prompts that work, it asks whether \emph{known concept-inducing prompts under the base model} still preserve concept access after unlearning.
+
+\paragraph{Why this is interesting.}
+This teacher-guided setup supports a clean scientific claim:
+\begin{quote}
+If a prompt reliably evokes the target concept in the original model and still evokes it in the unlearned model, then unlearning has failed to erase that semantic pathway.
+\end{quote}
+
+\paragraph{Potential advantages.}
+\begin{itemize}
+    \item Filters out unnatural or semantically meaningless candidates;
+    \item Grounds the attack in the model's original concept manifold;
+    \item Provides a clearer notion of \emph{semantic recovery fidelity} than arbitrary prompt search.
+\end{itemize}
+
+\paragraph{Potential challenges.}
+\begin{itemize}
+    \item Requires queries to both base and unlearned models;
+    \item May favor prompt families already known to the base model, potentially reducing attack diversity;
+    \item Needs careful design to avoid simply rediscovering direct lexical triggers.
+\end{itemize}
+
+\subsection{Direction III: Contrastive Recovery Attack}
+\label{subsec:contrastive_attack}
+
+A third direction is to define the attack \emph{contrastively}, by comparing behavior under the base model and the unlearned model. The goal is to identify prompts for which the target concept is preserved under unlearning even though a successful unlearning method should have removed it.
+
+\paragraph{Core idea.}
+Rather than merely maximizing target concept presence in outputs from the unlearned model, we search for prompts where the \emph{gap} between the base and unlearned models is unexpectedly small. This turns concept recovery into a model comparison problem.
+
+\paragraph{Contrastive objective.}
+One candidate objective is:
+\begin{equation}
+J_{\mathrm{contrast}}(p;c)
+=
+S(G_u(p), c)
+-
+\mu \, \bigl| S(G_b(p), c) - S(G_u(p), c) \bigr|,
+\label{eq:contrastive_objective}
+\end{equation}
+where $S(G_b(p), c)$ and $S(G_u(p), c)$ denote target concept scores under the base and unlearned models, respectively.
+
+This objective rewards prompts that:
+\begin{itemize}
+    \item produce the target concept in the unlearned model; and
+    \item exhibit only a small drop relative to the base model.
+\end{itemize}
+
+An alternative formulation is to define a recovery ratio:
+\begin{equation}
+R(p;c) = \frac{S(G_u(p), c)}{S(G_b(p), c) + \epsilon},
+\label{eq:recovery_ratio}
+\end{equation}
+and optimize prompts with both high base-model concept induction and high relative retention under the unlearned model.
+
+\paragraph{Interpretation.}
+Contrastive recovery attacks are appealing because they do not merely ask whether a prompt can generate the target concept; they ask whether unlearning substantially changed the model's response along a given semantic pathway.
+
+\paragraph{Why this is interesting.}
+This direction supports a sharper claim than direct attack success alone:
+\begin{quote}
+Unlearning may preserve certain concept pathways almost unchanged relative to the original model, even when standard direct-prompt evaluation suggests successful forgetting.
+\end{quote}
+
+\paragraph{Potential advantages.}
+\begin{itemize}
+    \item Naturally identifies prompts on which unlearning has minimal effect;
+    \item Connects concept recovery to a measurable \emph{failure to shift} the model behavior;
+    \item May offer a more stable signal than optimizing solely on the unlearned model.
+\end{itemize}
+
+\paragraph{Potential challenges.}
+\begin{itemize}
+    \item Requires access to the base model;
+    \item Depends on reliable concept scoring under both models;
+    \item The objective must be designed carefully to avoid over-prioritizing trivial prompts.
+\end{itemize}
+
+\subsection{Summary and Open Design Choice}
+\label{subsec:summary_open_choice}
+
+The three directions above provide distinct ways to strengthen optimization-based prompt recovery beyond shallow prompt search:
+
+\begin{itemize}
+    \item \textbf{Graph-guided factorized recovery} treats concepts as distributed compositions of semantic factors and searches for interpretable recovery pathways;
+    \item \textbf{Base-model-as-teacher recovery} uses the original model to identify semantically grounded concept-inducing prompts;
+    \item \textbf{Contrastive recovery attack} directly searches for prompts on which unlearning fails to substantially alter model behavior.
+\end{itemize}
+
+These directions are not mutually exclusive. In particular, a promising combined design is to use graph-guided or factorized prompt generation to define the candidate search space, while using either a teacher-guided or contrastive signal to score candidates. This may yield a stronger and more principled attack than any single component alone.

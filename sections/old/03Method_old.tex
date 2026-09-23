@@ -1,0 +1,99 @@
+\section{Methods}
+Our methodology is divided into two primary phases. First, an interpretability phase where we probe the pre-trained model to map its latent conceptual structure. Second, a constructive phase where we use the insights from this map to design, implement, and test the hierarchy-aware unlearning methods.
+
+\subsection{Problem Definition: Knowledge-Graph Augmented Concept Unlearning}
+
+Let $\theta$ denote the parameters of a pre-trained text-to-image diffusion model $\mathcal{M}$. The model generates an image $x_0$ via a denoising process $p_\theta(x_{t-1}|x_t, c)$, conditioned on a text prompt $c$. We assume the existence of a conceptual knowledge graph $\mathcal{G} = (\mathcal{V}, \mathcal{E}, \mathcal{W})$, where $\mathcal{V}$ represents the set of all concepts (e.g., objects, artistic styles), $\mathcal{E}$ represents directed edges where an edge $(u, v) \in \mathcal{E}$ implies that concept $v$ is a descendant or semantic derivative of concept $u$ (e.g., \textit{Impressionism} $\to$ \textit{Monet}), and $\mathcal{W}: \mathcal{E} \to [0, 1]$ assigns a weight $w_{uv}$ representing the strength of influence or semantic similarity.
+
+Given a target concept to be unlearned, $c_{target} \in \mathcal{V}$, standard unlearning methods define the forget set as a singleton $\mathcal{C}_{forget} = \{c_{target}\}$. However, this ignores semantic leakage through descendant concepts. We propose a hierarchy-aware expansion of the forget set, $\mathcal{C}^\tau_{forget}$, governed by a structural influence threshold $\tau$. Let $Influence(c_{target}, v)$ be the cumulative weight of the path from $c_{target}$ to $v$. The expanded forget set is defined as:
+
+\begin{equation}
+    \mathcal{C}^\tau_{forget} = \{c_{target}\} \cup \{ v \in \mathcal{V} \mid Influence(c_{target}, v) > \tau \}
+\end{equation}
+
+
+
+Our objective is to derive a graph aware unlearned model parameters $\theta_{u}$ such that the generation probability of any concept within the expanded set is minimized, while preserving the generative quality of concepts in the retain set $\mathcal{V} \setminus \mathcal{C}^\tau_{forget}$:
+
+\begin{equation}
+\begin{aligned}
+\theta_{u} = \arg\min_{\theta}\;&
+\sum_{c \in \mathcal{C}^\tau_{forget}} 
+  \mathbb{E}_{x, t} \left[ \mathcal{L}_{forget}(x, c, t, \theta) \right] \\
+&+ \lambda \sum_{c \in \mathcal{V}_{retain}} 
+  \mathbb{E}_{x, t} \left[ \mathcal{L}_{retain}(x, c, t, \theta) \right]
+\end{aligned}
+\end{equation}
+
+
+where $\mathcal{L}_{forget}$ steers the model distribution away from the concept branch defined by $\mathcal{G}$, and $\mathcal{L}_{retain}$ ensures preservation of unrelated concepts.
+
+\subsection{\yian{This} Graph-Constrained Manifold Collapse}
+
+Let $p_\theta(x|c)$ denote the conditional distribution of a pre-trained diffusion model parameterized by $\theta$. We are given a directed, weighted knowledge graph $\mathcal{G}=(\mathcal{V}, \mathcal{E}, w)$, where vertices $v \in \mathcal{V}$ represent concepts and edges $e_{ij} \in \mathcal{E}$ represent semantic subsumption (e.g., \textit{Child} $\to$ \textit{Parent}) with influence weights $w_{ij} \in [0,1]$.
+
+Given a target concept $c_t \in \mathcal{V}$ to be unlearned, we identify its \textit{structural semantic neighborhood} $\mathcal{N}(c_t) = \{c_k \mid w_{tk} > \tau\}$, which represents the set of descendants or heavily influenced peers.
+
+The standard unlearning objective minimizes the likelihood of generating $x$ given $c_t$. However, this is ill-posed as it leaves the distribution $p_\theta(x|c_t)$ undefined (often collapsing to noise or generic artifacts). We propose a \textbf{Targeted Manifold Collapse} objective. Our goal is to learn updated parameters $\theta^*$ such that the conditional distribution of the target and its neighborhood collapses into the distribution of its nearest safe ancestor (or safe peer), denoted as $c_{anc}$.
+
+Formally, we minimize the statistical divergence (e.g., KL or Fisher Divergence) between the target branch and the ancestor, while maintaining the fidelity of the remaining concepts $\mathcal{V}_{retain} = \mathcal{V} \setminus (\{c_t\} \cup \mathcal{N}(c_t))$:
+
+\begin{equation}
+\label{eq:objective}
+\begin{aligned}
+\theta^* &= \arg\min_{\theta} \underbrace{\sum_{c \in \{c_t\} \cup \mathcal{N}(c_t)} w_{c} \cdot D_f(p_\theta(x|c) || p_{\theta_{fixed}}(x|c_{anc}))}_{\text{Ancestral Collapse}} \\
+&+ \lambda \underbrace{\sum_{c \in \mathcal{V}_{retain}} D_f(p_\theta(x|c) || p_{\theta_{fixed}}(x|c))}_{\text{Retain Preservation}}
+\end{aligned}
+\end{equation}
+
+where $D_f$ is a chosen divergence measure, and $p_{\theta_{fixed}}$ represents the distribution of the frozen, original model. This forces the model to treat the prompt for "Van Gogh" ($c_t$) as mathematically equivalent to "Impressionism" ($c_{anc}$), effectively pruning the specific branch while preserving the root.
+
+
+\subsection{Phase 1: Mapping the Conceptual Hierarchy}
+Before we can design a hierarchy-aware method, we must first validate our central hypothesis: that such a hierarchy exists and is encoded in the model's latent space.
+
+\noindent \textbf{1. Knowledge Graph Construction.}
+We will construct an art style knowledge graph $G = (V, E)$ for the 60 artistic styles ($V$) in the \textsc{UnlearnCanvas} benchmark~\cite{zhang2024unlearncanvas}. We will define directed edges ($E$) based on established art style relationships, creating parent-child links (e.g., $C_{\text{Monet}} \rightarrow C_{\text{Impressionism}}$).
+
+\noindent \textbf{2. Mechanistic Interpretability Probe.}
+We will then find the model's internal representation for each style $C_i \in V$, like \textbf{SAeUron}~\cite{cywinski2025saeuron}, which uses Sparse Autoencoders (SAEs) to discover sparse, interpretable features in the model's activation space. This will provide a mapping from each style concept $C_i$ to its corresponding set of latent features $F_i$.
+
+\noindent \textbf{3. Hypothesis Validation.}
+We will test our hypothesis by performing a standard unlearning intervention and evaluating the generative output. As outlined in our experiment (Section \ref{sec:experiment}), if prompting for "Monet" causes the model to revert to "Impressionism," we validate that our graph $G$ is a meaningful proxy for the model's latent knowledge structure.
+
+
+\subsection{Phase 2: Proposed Hierarchy-Aware Unlearning Methods}
+Based on the validated graph $G$ and the corresponding feature sets $\{F_i\}$, we propose three unlearning ideas.
+
+\subsubsection{Method 1: Knowledge Graph enhanced Unlearning}
+\yian{for weighted graphs, we set a threshold $\tau$, if the weight is less than this threshold, we don't want to cut this edge, else, we remove the concept.}
+
+\yian{How to model it as a probability problem? $P(x|c)$}
+Instead of leaving an empty space where the concept was, we can explicitly remap the concept to a semantically meaningful anchor. That is, we redirect the generative process from the child concept to its parent concept (or a peer concept) from our knowledge graph.
+
+When unlearning $C_{target}$, we want to distribute its distribution proportionally to its related concepts $C_i \in V$ with a strength based on their graph distance from $C_{target}$.
+
+We will define a graph-based distance $d(C_{target}, C_i)$ in $G$. The distribution for any concept $C_i$ will be given by a weighting function (e.g., $\alpha(C_i) = \exp(-k \cdot d(C_{target}, C_i))$, where $k$ is a hyperparameter). The final unlearning loss will be, propagating the distribution from unlearning concept across the entire graph:
+
+The unlearning objective will be to minimize the distance between the model's representation for $C_{target}$ and its representation for $C_{parent}$:
+$$\mathcal{L}_{\text{unlearn}} = \text{Distance}(\text{Model}(C_{target}), \text{Model}(C_{parent}))$$
+This provides a more stable and predictable unlearning outcome, filling the conceptual void with the most logical, pre-existing alternative.
+
+\subsubsection{Method 2: Orthogonal Projection of Concept Subspaces}
+Identify the set of all interpretable features that define the entire conceptual branch we wish to protect. Then, use an inference-time intervention to project the model's activations onto a subspace that is orthogonal to this protected subspace, nullifying its influence.
+\begin{enumerate}
+\renewcommand{\labelenumi}{(\alph{enumi})}
+    \item Using our graph $G$, identify the set of all concepts in the target branch $B = \{C_{target}, C_{child1},...\}$.
+    \item Find the union of all features responsible for this branch, $F_B = \bigcup_{C_i \in B} F_i$.
+    \item These features define a conceptual subspace $V_B$ in the model's activation space.
+    \item The unlearning intervention, inspired by SAeUron~\cite{cywinski2025saeuron}, will be a projection. For any activation $x$ at the target layer, its unlearned counterpart $x'$ is computed as: $x' = x - \text{proj}_{V_B}(x)$.
+\end{enumerate}
+
+Steps:
+\begin{enumerate}
+    \item Compute forget subspace by performing SVD on the cross-attention weights activated by prompts from the forget set.
+    \item Compute retain subspace by performing SVD on the cross-attention weights activated by prompts from the retrain set.
+    \item Gram-Schimdt process or similar orthogonalization procedure to find basis of forget space that's orthogonal to retain space. Consider it as the projection operator
+\end{enumerate}
+This method offers the a precise and robust form of erasure, as it does not just target a single style name but removes the shared, underlying features of the entire artistic movement from the generative process.
+\subsubsection{Method 3: ESD inspired }

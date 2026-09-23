@@ -1,0 +1,11 @@
+\section{Limitations and Broader Impact}
+\label{sec:limitations}
+
+\noindent{\bf Scope of empirical evaluation.}
+Our evaluation covers five target concepts on one backbone (Stable Diffusion v1.4) and one benchmark family. The concepts span $\hat\kappa \in [0.27, 0.89]$, but four of five are high-$\hat\kappa$ and architectural concepts have only one representative. While the observed $\kappa$-scaling trend is consistent within this sample, broader evaluation over low-$\hat\kappa$ concepts, additional backbones such as SDXL and FLUX, and non-object concepts such as styles and identities is needed to test generality.
+
+\noindent{\bf $\hat\kappa$ estimation.}
+Our $\hat\kappa$ estimator fixes the activation layer, denoising timestep, neighbor pool size, and PCA dimensionality. Although~\Cref{app:kappa_estimation} shows reasonable stability, $\hat\kappa$ remains an empirical proxy for the theoretical $\kappa$ in~\Cref{thm:tradeoff}, and its neighbor pool depends on CLIP-similarity retrieval. The exact correspondence between $\hat\kappa$ and the theoretical overlap coefficient remains empirical.
+
+\noindent{\bf Broader Impacts.}
+Our analysis is instantiated in diffusion models, but the mechanism only requires activation displacement, local smoothness of the activation map, and target--neighbor overlap in representation space. Similar $\kappa$-scaled trade-offs may arise in autoregressive language models, classifiers, and multimodal models, but verifying this requires task-specific definitions of concepts, activations, and preservation.

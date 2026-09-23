@@ -1,0 +1,78 @@
+\section{Introduction}
+Recent advances in text-to-image diffusion models have enabled the creation of high-quality, complex, and diverse images from simple text prompts. This power, however, is derived from training on large scale datasets that frequently include copyrighted material, personal data, and harmful content without consent or curation~\cite{gandikota2023erasing}. Consequently, these models can be prompted to replicate the unique, protected styles of living artists, raising significant legal and ethical concerns regarding copyrights, authorship, and the disruption of creative labor markets.
+
+To address these concerns, the field of Machine Unlearning (MU), or "concept erasure," has emerged as a critical solution~\cite{gandikota2023erasing, gandikota2024unified}. The goal is to remove an undesirable concept, either a harmful category or a copyrighted artistic style, from a pre-trained model without the prohibitive cost of retraining from scratch.
+
+Past work on diffusion model unlearning has primarily focused on the echanism of deletion. These methods can be broadly categorized into two groups:
+
+\textbf{Fine-Tuning Methods:} The dominant approach involves fine-tuning the pre-trained model with a modified objective function. This includes methods like Erased Stable Diffusion (ESD)~\cite{gandikota2023erasing}, Forget-Me-Not (FMN)~\cite{zhang2024forget}, and Unified Concept Editing (UCE)~\cite{gandikota2024unified}, which use negative guidance to steer the model away from the target concept. More surgical approaches like SalUn~\cite{fan2023salun} and Scissorhands~\cite{wu2024scissorhands} attempt to identify and modify only the specific model weights responsible for the concept. Other methods like Concept Ablation (CA)~\cite{vinker2023concept}, Selective Amnesia (SA)~\cite{heng2023selective}, and EraseDiff (EDiff)~\cite{wu2024erasediff} also operate by modifying model weights.
+
+\textbf{Inference-Time Methods:} Other techniques, such as SEOT~\cite{li2024get} and SPM~\cite{lyu2024one}, modify the generation process at inference time, often by editing text embeddings or using lightweight adapters to block concept propagation.
+
+While these methods vary in their implementation, they share the same conceptual limitation: they are designed as "deletion tools" for isolated concepts. Thus lacking the ability to understand the model's internal knowledge structure.
+
+However, the core challenge, and the primary motivation for this work, is that current unlearning methods treat concepts as isolated, independent entities to be deleted one by one. This approach ignores the reality that concepts are deeply interconnected. An artist's style (e.g., Renoir), for instance, is not isolated but semantically linked to its art movement (e.g., Impressionism), its peers (e.g., Monet), and its visual predecessors.
+
+This isolated concept assumption leads to two critical failures for copyright protection:
+\begin{itemize}
+    \item \textbf{Ineffective Erasure:} Unlearning a specific artist's name may be easily bypassed by prompting for a neighbor style, for example, "a style similar to Monet" or a different artist from the same movement, which still harms the artist's intellectual property. This vulnerability is highlighted by adversarial attacks that can "jailbreak" unlearned models~\cite{zhang2024generate}.
+    \item \textbf{Collateral Damage:} An imprecise or overly aggressive unlearning method may cause "catastrophic forgetting," accidentally damaging or erasing related, benign concepts. For example, an attempt to erase "Monet" might unintentionally degrade the model's ability to generate images in the broader Impressionism style.
+\end{itemize}
+
+These issues are especially pronounced when concepts naturally form hierarchies (e.g., class taxonomies or style families). We highlight three recurring challenges:
+
+\begin{itemize}
+    \item \textbf{Unlearning superclasses is compositional.} It is difficult to unlearn a high-level concept (superclass) without explicit example images. For example, to forget \textit{aquatic mammals}, the model effectively needs to unlearn beavers, dolphins, otters, and other related subclasses.
+    \item \textbf{Unlearning parents does not guarantee children are forgotten.} Even when images for the parent concept are available, removing the parent does not guarantee its children are erased. For instance, after unlearning \textit{Impressionism}, prompts in the style of \textit{Van Gogh} may still resurface.
+    \item \textbf{Child-level unlearning can damage parents and peers.} Unlearning a specific child concept can inadvertently harm related concepts. For example, deleting \textit{Van Gogh} may degrade the quality of \textit{Impressionism} or \textit{Monet}-style generations.
+\end{itemize}
+
+These observations suggest that unlearning cannot be treated as independent deletions in an unstructured concept list. Instead, effective and safe unlearning must explicitly account for the structured nature of knowledge in diffusion models.
+
+Thus we reframe diffusion model unlearning from a local deletion tool into a structure-aware probe of model knowledge. Our starting hypothesis is that abstract concepts are internally organized in a directional, hierarchical knowledge graph in the model’s latent space. For example, a general style such as \emph{Impressionism} behaves as a parent node whose children include artist-specific styles like \emph{Monet} and \emph{Renoir}. This hypothesis yields a concrete, testable prediction: if a child node is successfully unlearned, the model’s output for that prompt should not collapse to noise or a generic photo; instead, it should revert to the semantically closest ancestor or peer node.
+
+To study and exploit this structure, we take two steps. First, we construct explicit concept graphs for standard diffusion benchmarks. For ImageNet~\cite{deng2009imagenet} categories, we leverage WordNet~\cite{fellbaum1998wordnet} to induce class hierarchies (e.g., \textit{canine} $\rightarrow$ \textit{retriever} $\rightarrow$ \textit{golden retriever}). For the \textsc{UnlearnCanvas} style benchmark~\cite{zhang2024unlearncanvas}, we aggregate evidence from WikiArt, WordNet, and multiple large language models to build an art-style knowledge graph. By asking multiple models to propose hierarchies over the 60 styles and aggregating their outputs, we estimate edge existence probabilities and obtain a directed graph with edge weights over styles.
+
+Second, given this graph, we design a knowledge-graph–enhanced unlearning procedure for diffusion models. Our method aligns the model’s representation space with the external concept graph so that related concepts occupy structured, well-separated regions. This structure-aware training makes it easier to erase specific nodes or subtrees while controlling collateral effects. Algorithmically, our unlearning objective operates along the graph: it can remove entire branches to prevent bypass attacks and does so with improved accuracy and efficiency compared to prior methods.
+
+In summary, this paper makes the following contributions:
+\begin{enumerate}
+    \item \textbf{Structured concept graphs for diffusion benchmarks.} We construct and release hierarchical knowledge graphs tailored to diffusion model unlearning. For ImageNet-style categories, we use WordNet to induce semantic hierarchies. For \textsc{UnlearnCanvas}, we build the first art-style knowledge graph by combining WikiArt metadata, WordNet relations, and ensembles of large language models, yielding a directed style graph with edge weights.
+    
+    \item \textbf{A structure-aware unlearning framework.} We propose a knowledge-graph–enhanced unlearning method for diffusion models that explicitly operates over concept hierarchies. Our approach supports targeted deletion of individual nodes as well as branch-level unlearning to mitigate prompt-based bypasses, better reflecting real-world copyright and safety requirements.
+    
+    \item \textbf{Representation learning aligned with concept structure.} We train diffusion models so that their latent representations become more \emph{spread out} and aligned with the external concept graph: nearby nodes in the graph remain close, while distinct subtrees are disentangled. This structured representation makes it easier to remove specific concepts with minimal collateral damage and provides a new lens on how diffusion models encode abstract styles.
+    
+    \item \textbf{Improved accuracy and efficiency in unlearning.} Across ImageNet-like classes and the \textsc{UnlearnCanvas} styles, our structure-aware approach achieves better unlearning performance—both in terms of deletion accuracy and preservation of benign concepts—while also reducing computational cost and convergence time relative to existing fine-tuning and inference-time baselines.
+\end{enumerate}
+
+\yian{if the knowledge graph has dog $\rightarrow$ golden retriever and cartoon $\rightarrow$ golden retriever, what should we expect?: try both, generate golden retriever that is cartoon but not a dog. }
+
+\yian{$A \rightarrow B \leftarrow C$, Cgenerate B conditioned on C}
+
+\yian{the nodes should not be affected when their neighbors are removed when the edges are just look alike ot influenced by.}
+
+\yian{should we create new nodes, or only have the existing nodes}
+
+\yian{what would happen for directed / undirected graph}
+
+\yian{what if let model learn the similarities / edges}
+
+\yian{A->B, how are the representations of both nodes gonna change, conditioned on they are now they are connected}
+
+\yian{"generate directed graph, if an artist is influenced by multiple styles, the style should be the parent of this artist. if a style is influenced by a style, there should also be edges. a node can have multiple parents"}
+
+\yian{CURE's core mathematical assumption is that the "forget subspace" is orthogonal to the "retain subspace." This assumption holds for semantically distant concepts but is demonstrably false for entangled ones. The subspace for "Van Gogh" is not orthogonal to the subspace for "Impressionism" or "Monet"; they share significant components. By projecting out the entire "Van Gogh" subspace, CURE guarantees collateral damage to any related concept that shares that subspace. Its reliance on a single, neutral retain concept makes it blind to this overlap.}
+
+\yian{
+Historical styles
+Venetian Renaissance painting (Titian, Tintoretto). 
+Late Renaissance / Mannerist painting (El Greco and others experimenting with expressive handling of paint). 
+Baroque painting, especially Dutch and Spanish Baroque (Rembrandt, Rubens, Velázquez, Caravaggio, Frans Hals). 
+Romantic landscape and naturalist painting of the 19th century (e.g., John Constable). 
+Modern movements
+Impressionism (Monet, Cézanne; thick, broken color and visible strokes). 
+Post‑Impressionism (especially Van Gogh’s highly textured surfaces). 
+Expressionism (using thick paint for emotional intensity and distortion). 
+Abstract Expressionism and other modernist abstraction (e.g., de Kooning, Pollock, later 20th‑c. gestural painters)
+}

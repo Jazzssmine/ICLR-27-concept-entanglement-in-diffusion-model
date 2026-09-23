@@ -1,0 +1,136 @@
+\newpage
+
+\section{Experiment}
+\label{sec:experiment}
+
+
+\varun{do not read}
+\subsection{Evaluation Metrics}
+\label{subsec:attack_metrics}
+
+We evaluate both the effectiveness of the optimization-based prompt recovery attack and the extent to which concept-unlearning methods preserve neighboring concepts.
+
+\paragraph{Attack Success Rate (ASR).}
+For a target concept $c$, we define the attack success rate as the fraction of attacked prompts whose generated images are judged to contain $c$:
+\begin{equation}
+\mathrm{ASR}(c) = \frac{1}{N} \sum_{i=1}^{N} \mathbb{I}\bigl[\mathrm{Judge}(G_u(p_i), c) = 1 \bigr],
+\end{equation}
+where $p_i$ denotes the optimized prompt returned by the attack for trial $i$, and $\mathrm{Judge}$ is a concept-presence evaluator such as a VLM judge, detector, or thresholded similarity score. Higher ASR indicates that the erased concept remains recoverable despite unlearning.
+
+\paragraph{Recovery Score.}
+Beyond binary success, we also report a continuous recovery score measuring how strongly the generated image expresses the target concept:
+\begin{equation}
+\mathrm{Recovery}(c) = \frac{1}{N}\sum_{i=1}^{N} S_{\mathrm{target}}(G_u(p_i), c).
+\end{equation}
+This metric captures graded failures even when the concept is not cleanly detected as present.
+
+\paragraph{Query Efficiency.}
+To measure attack efficiency, we report the number of model queries required to achieve the first successful recovery:
+\begin{equation}
+\mathrm{QueriesToSuccess}(c) = \frac{1}{N_{\mathrm{succ}}} \sum_{i:\,\mathrm{succ}_i=1} q_i,
+\end{equation}
+where $q_i$ is the number of model queries used in trial $i$ before the first successful concept recovery. Lower values indicate a stronger and more efficient attack.
+
+\paragraph{Prompt Fluency.}
+To verify that successful attacks remain interpretable and realistic, we report a naturalness score over optimized prompts:
+\begin{equation}
+\mathrm{Naturalness} = \frac{1}{N} \sum_{i=1}^{N} S_{\mathrm{Fluent}}(p_i).
+\end{equation}
+Depending on implementation, $S_{\mathrm{natural}}$ may be instantiated using language-model likelihood, a fluency judge, or human/LLM ratings.
+
+\paragraph{Lexical Distance.}
+We also quantify how indirectly the optimized prompt refers to the erased concept. Let $\mathrm{LexDist}(p_i, c)$ denote a lexical or semantic distance between prompt $p_i$ and concept $c$. We report:
+\begin{equation}
+\mathrm{LexicalDistance}(c) = \frac{1}{N} \sum_{i=1}^{N} \mathrm{LexDist}(p_i, c).
+\end{equation}
+Higher lexical distance indicates that successful recoveries arise from more indirect prompts rather than near-explicit paraphrases.
+
+\paragraph{Robustness Gap.}
+To assess the extent to which standard direct-prompt evaluation overestimates forgetting, we compare optimized indirect attacks against direct prompts:
+\begin{equation}
+\mathrm{RobustnessGap}(c)
+=
+\mathrm{ASR}_{\mathrm{opt}}(c)
+-
+\mathrm{ASR}_{\mathrm{direct}}(c),
+\end{equation}
+where $\mathrm{ASR}_{\mathrm{opt}}$ is the attack success rate under optimization-based indirect prompts, and $\mathrm{ASR}_{\mathrm{direct}}$ is the corresponding success rate under direct prompt evaluation. A larger gap indicates that direct-prompt tests substantially understate residual concept recoverability.
+
+\paragraph{Neighbor Preservation.}
+To quantify collateral forgetting, we evaluate the model on a set of semantically related but non-target concepts $\mathcal{N}(c)$, such as \{\texttt{deer}, \texttt{zebra}, \texttt{giraffe}\} for target concept \texttt{horse}. Let $u$ denote an unlearning method and $G_{\mathrm{base}}$ the original pretrained model. We define neighbor preservation as
+\begin{equation}
+\mathrm{NeighborPres}(c)
+=
+\frac{1}{|\mathcal{N}(c)|}
+\sum_{c' \in \mathcal{N}(c)}
+\frac{\mathrm{Perf}(G_u, c')}{\mathrm{Perf}(G_{\mathrm{base}}, c')},
+\end{equation}
+where $\mathrm{Perf}(G, c')$ measures generation quality or concept fidelity for neighboring concept $c'$. Lower values indicate stronger collateral damage.
+
+\paragraph{Robustness--Specificity Tradeoff.}
+Finally, we study the tradeoff between robustness to indirect recovery and preservation of nearby benign concepts by jointly analyzing $\mathrm{ASR}(c)$ and $\mathrm{NeighborPres}(c)$ across unlearning methods. A desirable method should achieve both low attack success and high neighbor preservation; in practice, we often observe that methods with lower attack success incur greater degradation on semantically related concepts.
+
+\subsection{Baseline Methods}
+We will benchmark against a set of SOTA unlearning methods to understand how different unlearning mechanisms affect the latent conceptual structure. These baselines include:
+
+\begin{itemize}
+    \item ESD~\cite{gandikota2023erasing}
+    \item FMN~\cite{zhang2024forget}
+    \item CA~\cite{vinker2023concept}
+    \item UCE~\cite{gandikota2024unified}
+    \item SA~\cite{heng2023selective}
+    \item SalUn~\cite{fan2023salun}
+    \item EDiff~\cite{wu2024erasediff}
+    \item SHS~\cite{wu2024scissorhands}
+    \item SPM~\cite{lyu2024one}
+    \item SEOT~\cite{li2024get}
+    \item SAeUron~\cite{cywinski2025saeuron}
+\end{itemize}
+
+\subsection{Experimental Protocol and Evaluation}
+Our experiment will follow a rigorous, multi-phase protocol based on the evaluation pipeline from~\cite{zhang2024unlearncanvas}.
+
+\noindent \textbf{Phase 1: Testbed Preparation.}
+We will first fine-tune the base Stable Diffusion v1.5 model on the \textsc{UnlearnCanvas} dataset. We will also train the high-accuracy style and object classifiers as described in~\cite{zhang2024unlearncanvas}. This fine-tuned model serves as our baseline model $M_o$.
+
+\noindent \textbf{Phase 2: Hierarchical Unlearning Intervention.}
+Using our newly constructed style hierarchy, we will select a child style $S_{child}$. We will then apply each baseline unlearning method to $M_o$ to erase $S_{child}$, creating a set of unlearned models $\{M_{u}\}$.
+
+\noindent \textbf{Phase 3: Answer Set Generation.}
+We will probe each $M_{u}$ model by prompting it for the erased concept (e.g., "A painting of a cat in Monet style"). We will generate a large set of images for statistical analysis.
+
+\noindent \textbf{Phase 4: Quantitative Evaluation and Hypothesis Testing.}
+The generated images from Phase 3 will be fed into the style classifier from Phase 1.
+\begin{itemize}
+    \item \textbf{Hypothesis Metric (Parent Reversion Rate):} Our primary evaluation will analyze the distribution of misclassifications. Our hypothesis predicts that these images will be classified as the parent style $S_{parent}$ or peer style $S_{peer}$ at a rate significantly higher than any other style or random chance.
+    \item \textbf{Standard Metrics:} We will also report the standard metrics from~\cite{zhang2024unlearncanvas} to validate the unlearning process:
+        \begin{itemize}
+            \item \textbf{Unlearning Accuracy (UA):} Must be high, confirming $S_{child}$ was effectively erased.
+            \item \textbf{In-domain Retain Accuracy (IRA):} Must be high, ensuring other styles are preserved.
+            \item \textbf{Cross-domain Retain Accuracy (CRA):} Must be high, ensuring all 20 object concepts are preserved.
+            \item \textbf{FID Score:} Must remain low, ensuring overall image quality is not degraded.
+        \end{itemize}
+\end{itemize}
+
+\noindent \textbf{Phase 5: Robustness and Ablation Studies.}
+To ensure our findings are robust, we will conduct two challenging ablations:
+\begin{itemize}
+    \item \textbf{Adversarial Robustness:} We will use \textbf{UnlearnDiffAtk}~\cite{zhang2024generate} to craft adversarial prompts that attempt to jailbreak the unlearned model. We will then measure if the model still reverts to the parent style, or if the adversarial attack can successfully reactivate the erased child concept.
+    \item \textbf{Sequential Unlearning:} We will investigate the unlearning rebound effect~\cite{zhang2024unlearncanvas} in a structured manner. We will sequentially unlearn multiple child nodes from the same parent and observe the cumulative effect on the "Impressionism" parent node, testing for catastrophic retaining failure within a semantic branch.
+\end{itemize}
+
+\begin{comment}
+    \subsection{Dataset and Hierarchy Construction}
+A robust test of our hypothesis requires a dataset with two properties: (1) a diverse set of artistic styles with clear hierarchical relationships (e.g., "parent" movements and "child" artist styles), and (2) high stylistic consistency, enabling a classifier to reliably distinguish between them. We consider two main candidates:
+
+\noindent \textbf{Option 1: \textsc{UnlearnCanvas}.}
+The \textsc{UnlearnCanvas} benchmark~\cite{zhang2024unlearncanvas} is our primary choice. It was designed for unlearning evaluation and contains 60 distinct artistic styles and 20 object classes. Its key advantage is its high stylistic consistency, which allowed the authors to train a style classifier with $98.8\%$ accuracy~\cite{zhang2024unlearncanvas}. This high-fidelity classifier is essential for our experiment, as we need to reliably measure the stylistic shift in the generated output.
+
+However, \textsc{UnlearnCanvas} presents its 60 styles as a flat list, with no formal hierarchy. Then we need to construct an art style knowledge graph for these 60 styles. We will map child styles (e.g., "Monet", "Van Gogh", "Picasso") to their respective parent art movements (e.g., "Impressionism", "Post-Impressionism", "Cubism"), many of which are also present in the dataset. This new hierarchy will serve as the ground truth for our directional unlearning experiments.
+
+\noindent \textbf{Option 2: WikiArt.}
+The \textsc{WikiArt} dataset~\cite{phillips2011wiki} is a large-scale alternative dataset. Researchers have previously proposed hierarchical groupings for these styles, which we could adopt. However, the \textsc{UnlearnCanvas} paper notes that \textsc{WikiArt} suffers from significant stylistic inconsistency, leading to a much lower classification accuracy on generated images~\cite{zhang2024unlearncanvas}. This ambiguity would make it difficult to quantitatively prove that a model has "reverted" to a parent style, as the classifier itself would be unreliable. Therefore, we will proceed with \textsc{UnlearnCanvas} as our primary dataset.
+
+\noindent \textbf{Option 3: Cifar, Imagenet and CelebA.}
+
+\end{comment}

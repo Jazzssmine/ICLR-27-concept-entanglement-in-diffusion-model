@@ -1,0 +1,183 @@
+\section{Per-Concept Results}
+\label{app:per_concept_tables}
+
+This appendix provides the per-concept evaluation tables underlying the averaged results in \Cref{tab:main_results_avg}. For each of the five target concepts, we report all metrics across the seven unlearning methods. The concepts span estimated entanglement coefficients $\hat\kappa \in [0.27, 0.89]$ (\Cref{tab:kappa}), enabling the $\kappa$-scaling analysis in \Cref{subsec:kappa_scaling}.
+
+We order tables by $\hat\kappa$ in descending order to make the predicted scaling visually apparent: collateral damage (low IRA, low NP, high DamageGap) is most pronounced for high-$\hat\kappa$ concepts and attenuates as $\hat\kappa$ decreases.
+
+\paragraph{SAeUron coverage.} 
+SAeUron's released sparse autoencoder features cover the four animal concepts (\texttt{dog}, \texttt{bear}, \texttt{horse}, \texttt{cat}) but not \texttt{castle}. We mark the corresponding row with -- in \Cref{tab:per_concept_castle} and exclude SAeUron from the averaged castle entries. Attempts to substitute SAeUron's \texttt{architectures} feature for \texttt{castle} did not yield meaningful suppression of castle generation (verified by visual inspection at the default ablation multiplier); we therefore report SAeUron only on concepts where its released features apply.
+
+\paragraph{Reading the tables.}
+All tables follow the same column structure as \Cref{tab:main_results_avg}: erasure metrics (UA, IRR), retention metrics (IRA, NP, CP), and the composite DamageGap. The \emph{Original} row reports baseline rates for the unedited $\mathcal{D}_\theta$ on each concept's evaluation set; note that baseline IRA varies substantially across concepts (e.g., {0.85} for \texttt{cat} vs. {0.54} for \texttt{tower/castle}) due to differences in CLIP evaluator accuracy on each concept's in-domain object set. This per-concept baseline variation motivates our use of normalized retention ratios in~\cref{subsec:kappa_scaling}.
+
+% ============================================================
+% Per-concept tables, ordered by descending kappa
+% ============================================================
+
+\subsection{Dog}
+\label{app:per_concept_dog}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Erasure}} & \multicolumn{3}{c}{\textbf{Retention}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+\textbf{Method} & \textbf{Type} & UA$\uparrow$ & IRR$\downarrow$ & IRA$\uparrow$ & NP$\uparrow$ & CP$\uparrow$ & DamageGap$\downarrow$ \\
+\midrule
+Original    & --          & 0     & 27.0  & 78.92 & 100   & 100   & --    \\
+\midrule
+ESD         & FT          & 75.0  & 17.5  & 74.15 & 93.51 & 96.0  & 2.48  \\
+SalUn       & FT          & 90.0  & 8.0   & 50.92 & 58.01 & 76.0  & 17.98 \\
+EDiff       & FT          & 62.0  & 23.5  & 66.61 & 80.29 & 92.99 & 12.70 \\
+\midrule
+AdvUnlearn  & Robust FT   & 96.0  & 20.0  & 74.30 & 63.05 & 99.0  & 35.94 \\
+STEREO      & Robust FT   & 100.0 & 1.0   & 4.76  & 1.81  & 64.0  & 62.18 \\
+\midrule
+SEOT        & Inf.        & 68.0  & 30.0  & 79.07 & 84.20 & 99.0  & 14.80 \\
+SAeUron     & Inf.        & 78.0  & 18.5  & 8.76  & 4.27  & 73.0  & 68.72 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept evaluation for \texttt{dog} ($\hat\kappa = 0.89$).} Discovered neighbors include 
+\texttt{puppy}, \texttt{labrador}, \texttt{beagle}, \texttt{husky}, and \texttt{retriever} (full list in~\Cref{app:eval_pipeline}). As the highest-$\hat\kappa$ concept in our evaluation, \texttt{dog} exhibits the most severe robustness--retention trade-off: robust fine-tuning methods (STEREO, AdvUnlearn) achieve high UA but cause substantial IRA and NP degradation.}
+\label{tab:per_concept_dog}
+\end{table}
+
+\paragraph{Observations.}
+\texttt{Dog} exhibits the most severe trade-off in our evaluation, consistent with its position as the highest-$\hat\kappa$ concept. STEREO achieves complete erasure (UA = $100$) but collapses NP to $1.81$ and IRA to $4.76$ --- effectively destroying the model's ability to generate dog-related neighbors. SAeUron shows analogous catastrophic damage (NP = $4.27$, IRA = $8.76$) despite operating at inference time, suggesting that even modest displacement can wreck retention when neighbor activation regions densely overlap the target. ESD stands out as the only method achieving meaningful erasure (UA = $75$) while preserving neighbors well (NP = $93.51$, DamageGap = $2.48$), at the cost of higher residual leakage (IRR = $17.5$). The Pareto separation between ESD ($75, 93.51$) and STEREO ($100, 1.81$) is a $\approx 92$-point NP gap for a $25$-point UA gain, the steepest trade-off observed across our concepts and a direct empirical instantiation of the $\kappa$-scaled lower bound predicted by~\Cref{thm:tradeoff}.
+
+% ------------------------------------------------------------
+
+\subsection{Bear}
+\label{app:per_concept_bear}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Erasure}} & \multicolumn{3}{c}{\textbf{Retention}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+\textbf{Method} & \textbf{Type} & UA$\uparrow$ & IRR$\downarrow$ & IRA$\uparrow$ & NP$\uparrow$ & CP$\uparrow$ & DamageGap$\downarrow$ \\
+\midrule
+Original    & --          & 0     & 85.5  & 62.75 & 100   & 100   & --    \\
+\midrule
+ESD         & FT          & 94.5  & 9.0   & 44.00 & 58.02 & 95.0  & 36.97 \\
+SalUn       & FT          & 99.5  & 5.5   & 51.51 & 53.89 & 89.0  & 35.10 \\
+EDiff       & FT          & 96.0  & 6.0   & 38.61 & 56.75 & 94.0  & 37.24 \\
+\midrule
+AdvUnlearn  & Robust FT   & 99.0  & 1.0   & 42.46 & 67.37 & 100   & 32.62 \\
+STEREO      & Robust FT   & 99.5  & 2.0   & 15.88 & 13.75 & 77.0  & 63.25 \\
+\midrule
+SEOT        & Inf.        & 94.0  & 13.5  & 50.84 & 64.14 & 96.48 & 32.34 \\
+SAeUron     & Inf.        & 85.5  & 15.0  & 22.37 & 63.50 & 93.8  & 30.30 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept evaluation for \texttt{bear} ($\hat\kappa = 0.82$).} Discovered neighbors include \texttt{grizzly}, \texttt{panda}, \texttt{polar bear}, \texttt{koala}, and \texttt{cub} (full list in~\Cref{app:eval_pipeline}).}
+\label{tab:per_concept_bear}
+\end{table}
+
+\paragraph{Observations.}
+\texttt{Bear} sits in the high-$\hat\kappa$ regime alongside horse and dog, and exhibits the predicted Pareto structure. STEREO again occupies the high-erasure / low-retention extreme (UA = $99.5$, NP = $13.75$, DamageGap = $63.25$), while AdvUnlearn achieves comparable erasure (UA = $99$) with substantially better neighbor preservation (NP = $67.37$). The clustering pattern is unusually compressed on bear: standard fine-tuning methods (ESD, SalUn, EDiff) and the inference-time methods cluster tightly between NP = $53.89$--$67.37$, with SEOT and AdvUnlearn essentially tied at NP $\approx 64$--$67$. Notably, no method on bear matches the (high UA, high NP) operating point achieved on lower-$\hat\kappa$ concepts: even ESD, the best performer on \texttt{dog} and \texttt{castle}, reaches only NP = $58.02$ here. This compression of the achievable retention region is a direct manifestation of the $\hat\kappa$-scaled Pareto frontier predicted by~\Cref{thm:tradeoff}.
+\subsection{Horse}
+\label{app:per_concept_horse}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Erasure}} & \multicolumn{3}{c}{\textbf{Retention}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+\textbf{Method} & \textbf{Type} & UA$\uparrow$ & IRR$\downarrow$ & IRA$\uparrow$ & NP$\uparrow$ & CP$\uparrow$ & DamageGap$\downarrow$ \\
+\midrule
+Original    & --          & 0     & 75.5  & 71.23 & 100   & 100   & --    \\
+\midrule
+ESD         & FT          & 80.0  & 33.5  & 62.92 & 81.12 & 97.0  & 15.87 \\
+SalUn       & FT          & 95.0  & 28.5  & 40.92 & 39.42 & 91.99 & 52.57 \\
+EDiff       & FT          & 81.0  & 31.0  & 63.84 & 76.48 & 94.0  & 17.51 \\
+\midrule
+AdvUnlearn  & Robust FT   & 97.5  & 23.0  & 65.38 & 71.42 & 100   & 28.57 \\
+STEREO      & Robust FT   & 100.0 & 7.5   & 20.74 & 14.71 & 27.0  & 12.28 \\
+\midrule
+SEOT        & Inf.        & 81.5  & 38.5  & 69.69 & 97.06 & 99.0  & 1.93  \\
+SAeUron     & Inf.        & 78.0  & 39.5  & 76.92 & 82.48 & 94.0  & 11.51 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept evaluation for \texttt{horse} ($\hat\kappa = 0.81$).} Discovered neighbors include 
+\texttt{pony}, \texttt{mare}, \texttt{donkey}, \texttt{zebra}, \texttt{stallion}, \texttt{foal} and \texttt{mule} (full list in~\Cref{app:eval_pipeline}).}
+\label{tab:per_concept_horse}
+\end{table}
+
+\paragraph{Observations.}
+\texttt{Horse} is the running example used throughout \Cref{sec:experiment} and exhibits the canonical Pareto structure across method families. STEREO occupies the high-erasure / catastrophic-retention extreme (UA = $100$, NP = $14.71$, IRA = $20.74$); SEOT and SAeUron occupy the high-retention / weaker-erasure region (NP $\geq 82$ but IRR $\geq 38.5$); standard fine-tuning methods sit in between, with ESD reaching a clean $(80, 81.12)$ operating point at DamageGap = $15.87$. SalUn is an outlier among standard FT methods, achieving high UA = $95$ with NP = $39.42$, far below ESD and EDiff at comparable erasure --- consistent with SalUn's gradient-saliency masking displacing more activation than necessary for erasure. A second notable observation is STEREO's collapsed CP = $27$, far below STEREO's CP on the other four concepts (range $64$--$96$): in this high-$\hat\kappa$ regime, STEREO's adversarial subspace appears to spill beyond the intended object subspace into stylistically-correlated features, manifesting the broad subspace suppression discussed in~\Cref{rem:stereo}.
+\subsection{Cat}
+\label{app:per_concept_cat}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Erasure}} & \multicolumn{3}{c}{\textbf{Retention}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+\textbf{Method} & \textbf{Type} & UA$\uparrow$ & IRR$\downarrow$ & IRA$\uparrow$ & NP$\uparrow$ & CP$\uparrow$ & DamageGap$\downarrow$ \\
+\midrule
+Original    & --          & 0     & 96.0  & 85.50 & 100   & 100   & --    \\
+\midrule
+ESD         & FT          & 66.0  & 38.0  & 66.92 & 87.35 & 98.0  & 0.80  \\
+SalUn       & FT          & 87.0  & 21.0  & 34.53 & 73.04 & 100   & 26.95 \\
+EDiff       & FT          & 76.0  & 24.0  & 62.30 & 65.99 & 100   & 34.00 \\
+\midrule
+AdvUnlearn  & Robust FT   & 100.0 & 0.0   & 50.76 & 72.40 & 98.0  & 25.60 \\
+STEREO      & Robust FT   & 93.0  & 7.0   & 27.68 & 27.60 & 90.0  & 62.40 \\
+\midrule
+SEOT        & Inf.        & 71.66 & 34.0  & 42.15 & 81.99 & 100   & 18.01 \\
+SAeUron     & Inf.        & 72.0  & 37.5  & 60.25 & 85.63 & 96.0  & 10.37 \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept evaluation for \texttt{cat} ($\hat\kappa = 0.77$).} Discovered neighbors include \texttt{kitten}, \texttt{lynx}, \texttt{leopard}, \texttt{tiger}, and \texttt{cheetah} (full list in~\Cref{app:eval_pipeline}). The original baseline IRA = $85.50$ reflects high CLIP-evaluator accuracy on cat's in-domain object set after correcting for kitten/cat label confusion (see~\Cref{app:evaluation_setup}).}
+\label{tab:per_concept_cat}
+\end{table}
+
+\paragraph{Observations.}
+\texttt{Cat} exhibits a trade-off structure consistent with the high-$\hat\kappa$ regime, though its base IRA = $85.50$ is the highest of the five concepts, providing more retention "headroom" than other targets. STEREO again occupies the high-erasure / catastrophic-retention extreme (UA = $93$, NP = $27.60$, IRA = $27.68$), with DamageGap = $62.40$ matching its damage on horse and bear. AdvUnlearn achieves complete erasure (UA = $100$, IRR = $0$) at NP = $72.40$, demonstrating that adversarial training can preserve neighbors more effectively than STEREO at comparable erasure strength. ESD achieves a notable operating point: UA = $66$ at NP = $87.35$ with DamageGap = $0.80$, the cleanest standard-FT result on any concept in our evaluation, though at the cost of higher residual leakage (IRR = $38$). The STEREO IRA-retention ratio for cat ($27.68 / 85.50 = 0.32$) is consistent with the corresponding ratio on horse ($0.29$) and bear ($0.25$), reinforcing the $\hat\kappa$-scaling result in~\Cref{subsec:kappa_scaling}.
+\subsection{Castle}
+\label{app:per_concept_castle}
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Erasure}} & \multicolumn{3}{c}{\textbf{Retention}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-7}
+\textbf{Method} & \textbf{Type} & UA$\uparrow$ & IRR$\downarrow$ & IRA$\uparrow$ & NP$\uparrow$ & CP$\uparrow$ & DamageGap$\downarrow$ \\
+\midrule
+Original    & --          & 0     & 9.5   & 53.84 & 100   & 100   & --    \\
+\midrule
+ESD         & FT          & 88.0  & 6.5   & 48.15 & 83.03 & 99.0  & 15.98 \\
+SalUn       & FT          & 97.0  & 1.0   & 54.76 & 67.58 & 94.0  & 26.41 \\
+EDiff       & FT          & 82.0  & 2.5   & 46.46 & 87.35 & 99.0  & 18.69 \\
+\midrule
+AdvUnlearn  & Robust FT   & 100.0 & 1.0   & 44.00 & 83.10 & 100   & 16.89 \\
+STEREO      & Robust FT   & 100.0 & 0.0   & 29.38 & 31.96 & 96.0  & 64.03 \\
+\midrule
+SEOT        & Inf.        & 98.0  & 6.5   & 53.84 & 98.21 & 99.0  & 0.79  \\
+SAeUron     & Inf.        & --    & --    & --    & --    & --    & --    \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept evaluation for \texttt{castle} ($\hat\kappa = 0.27$).} Discovered neighbors include 
+\texttt{fortress}, \texttt{palace}, \texttt{citadel}, \texttt{keep}, \texttt{cathedral} and \texttt{manor} (full list in~\Cref{app:eval_pipeline}). SAeUron's released sparse autoencoder features do not cover \texttt{castle}; we attempted to substitute its \texttt{architectures} feature, but the resulting ablation did not yield meaningful suppression of castle generation.}
+\label{tab:per_concept_castle}
+\end{table}
+
+\paragraph{Observations.}
+\texttt{Castle} is the lowest-$\hat\kappa$ concept in our evaluation and demonstrates qualitatively different trade-off behavior from the high-$\hat\kappa$ animal concepts. Several methods achieve strong erasure with minimal retention damage: ESD reaches UA = $88$ at NP = $83.03$ (DamageGap = $15.98$), AdvUnlearn achieves complete erasure (UA = $100$) at NP = $83.10$ (DamageGap = $16.89$), and SEOT reaches UA = $98$ at NP = $98.21$ (DamageGap = $0.79$, the lowest of any (method, concept) pair in our evaluation). This is qualitatively distinct from the high-$\hat\kappa$ concepts, where no method achieves both UA $\geq 90$ and NP $\geq 80$. STEREO is the notable exception: despite the low predicted $\kappa$-floor, STEREO incurs NP = $31.96$ and DamageGap = $64.03$, comparable to its damage on the high-$\hat\kappa$ animal concepts. This is the empirical illustration of \Cref{thm:tradeoff} as a \emph{lower bound} rather than a ceiling: STEREO's REO objective broadly suppresses the spanned adversarial subspace regardless of whether neighbors actually occupy the displaced region (\Cref{rem:stereo}), producing damage well above the $\kappa$-predicted floor that other methods successfully hug. The separation between STEREO and the alternatives on \texttt{castle} suggests room for $\kappa$-aware unlearning methods that achieve robust erasure without STEREO's $\kappa$-blind over-suppression.

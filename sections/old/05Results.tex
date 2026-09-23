@@ -1,0 +1,17 @@
+\section{Results}
+
+\subsection{Erasure and Retention}
+Across 60 styles and 20 objects, baselines and our hierarchy-aware variant attain strong UA while preserving IRA. Methods with parameter locality (SalUn, UCE, SPM) better preserve non-targets than unconstrained fine-tuning.
+
+\subsection{Parental Fallback Evidence}
+On child-style prompts, generations from unlearned models consistently move toward the parent: the Parent fallback rate rises significantly over the original model and over baselines lacking our fallback prior. Visual inspection shows canonical parent motifs (brushwork, palette, composition) without collapse in image quality.
+
+\subsection{Leakage and Robustness}
+Under UnlearnDiffAtk, purely erasure-focused baselines exhibit prompt-based leakage; adding the parental prior reduces attack success and channels outputs into the parent manifold instead of re-creating the erased child. 
+ecva.net
+
+\subsection{Sequential Unlearning}
+When unlearning multiple children under the same parent, naive sequential edits can reactivate earlier children. Our cumulative constraint buffer mitigates reactivation with minimal utility loss.
+
+\subsection{Qualitative Analysis}
+We provide side-by-side grids for (child prompt → output) before/after unlearning, plus nearest-neighbor retrieval in style-classifier feature space. Outputs after unlearning retain object fidelity but alter stylistic cues toward the parent.

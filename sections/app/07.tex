@@ -1,0 +1,404 @@
+\section{Proof of~\cref{thm:tradeoff}}
+\label{app:proof}
+
+We restate the theorem and provide the proof. Throughout, distances in $\mathcal{H}$ are measured in $\ell_2$ norm.
+
+\begin{comment}
+    \begin{proof}
+We proceed in three steps.
+
+\medskip
+\noindent\textbf{Step 1: Required activation displacement for $\varepsilon$-robustness.}
+
+By Assumption~\ref{asm:edit}, any edit that achieves $\varepsilon$-robust unlearning of $c_u$ must displace activations in $\mathcal{R}_{c_u}$ by at least $\Delta$. By Assumption~\ref{asm:lip}, we may take
+\[
+    \Delta = \frac{1-\varepsilon}{L}.
+\]
+
+\medskip
+\noindent\textbf{Step 2: Aggregate overlap induces aggregate collateral displacement.}
+
+By Definition~\ref{def:overlap},
+\[
+    \kappa(c_u,\rho)
+    =
+    \frac{
+        \mathrm{vol}\!\left(
+        \mathcal{R}_{c_u}^{(\rho)}
+        \cap
+        \bigcup_{c'\in\mathcal{C}\setminus\{c_u\}}
+        \mathcal{R}_{c'}^{(\rho)}
+        \right)
+    }{
+        \mathrm{vol}\!\left(
+        \mathcal{R}_{c_u}^{(\rho)}
+        \right)
+    } .
+\]
+Thus, a $\kappa(c_u,\rho)$ fraction of the target concept's fattened activation region is shared with non-target concepts. Any displacement required for erasing $c_u$ therefore affects this shared portion of the non-target activation support. Averaging over the non-target prompt mixture $\mathcal{P}_{-u}$ gives
+\begin{equation}
+    \mathbb{E}_{p\sim \mathcal{P}_{-u}}
+    \left[
+    \|\boldsymbol{\Phi}_{\hat{\theta}}(p)-\boldsymbol{\Phi}_{\theta}(p)\|_2
+    \right]
+    \geq
+    \kappa(c_u,\rho)\Delta .
+\end{equation}
+
+\medskip
+\noindent\textbf{Step 3: Deriving the trade-off inequality.}
+
+Substituting $\Delta=(1-\varepsilon)/L$ gives
+\begin{equation}
+    \mathbb{E}_{p\sim \mathcal{P}_{-u}}
+    \left[
+    \|\boldsymbol{\Phi}_{\hat{\theta}}(p)-\boldsymbol{\Phi}_{\theta}(p)\|_2
+    \right]
+    \geq
+    \kappa(c_u,\rho)\frac{1-\varepsilon}{L}.
+\end{equation}
+Therefore, aggregate $\gamma$-concept preservation requires
+\[
+    \gamma
+    \geq
+    \kappa(c_u,\rho)\frac{1-\varepsilon}{L}.
+\]
+Rearranging yields
+\[
+    \varepsilon
+    \geq
+    1-\frac{L\gamma}{\kappa(c_u,\rho)}.
+\]
+This completes the proof.
+\end{proof}
+\end{comment}
+\begin{proof}
+We proceed in three steps.
+
+\medskip
+\noindent\textbf{Step 1: Required activation displacement for $\varepsilon$-robustness.}
+
+By construction of the activation region $\mathcal{R}_{c_u}$ (\cref{def:activation}), every $\mathbf{h}\in\mathcal{R}_{c_u}$ corresponds to a prompt whose pre-edit generation contains $c_u$, i.e.\ $\Pr[\mathbb{O}_{\mathcal{X}}(\mathbf{x}_\mathbf{h},c_u)=1]=1$. After an $\varepsilon$-robust edit (\cref{def:robust}), this probability drops below $\varepsilon$ at the displaced activation $\boldsymbol{\Phi}_{\hat\theta}(p)$. Applying~\cref{asm:lip} to the pre- and post-edit activations gives, for every $p$ with $\boldsymbol{\Phi}_\theta(p)\in\mathcal{R}_{c_u}$,
+\begin{equation}
+    1 - \varepsilon \;\le\; \bigl|\Pr[\mathbb{O}_{\mathcal{X}}(\mathbf{x}_{\boldsymbol{\Phi}_\theta(p)},c_u)=1] - \Pr[\mathbb{O}_{\mathcal{X}}(\mathbf{x}_{\boldsymbol{\Phi}_{\hat\theta}(p)},c_u)=1]\bigr|
+    \;\le\; L\,\|\boldsymbol{\Phi}_{\hat\theta}(p)-\boldsymbol{\Phi}_\theta(p)\|_2.
+\end{equation}
+Combined with~\cref{asm:edit}, this gives a uniform displacement floor on $\mathcal{R}_{c_u}$:
+\begin{equation}
+\label{eq:proof_delta_floor}
+    \Delta \;\geq\; \frac{1-\varepsilon}{L}.
+\end{equation}
+
+\medskip
+\noindent\textbf{Step 2: Aggregate overlap induces aggregate collateral displacement.}
+
+By~\cref{def:overlap},
+\begin{equation}
+    \kappa(c_u,\rho)
+    =
+    \frac{
+        \mathrm{vol}\!\left(
+        \mathcal{R}_{c_u}^{(\rho)}
+        \cap
+        \bigcup_{c'\in\mathcal{C}\setminus\{c_u\}}
+        \mathcal{R}_{c'}^{(\rho)}
+        \right)
+    }{
+        \mathrm{vol}\!\left(
+        \mathcal{R}_{c_u}^{(\rho)}
+        \right)
+    } .
+\end{equation}
+Let $\mathcal{O} := \mathcal{R}_{c_u}^{(\rho)} \cap \bigcup_{c'\neq c_u}\mathcal{R}_{c'}^{(\rho)}$ denote the overlap region. By~\cref{def:neighbor}, the non-target prompt distribution $\mathcal{P}_{-u} = \tfrac{1}{|\mathcal{C}\setminus\{c_u\}|}\sum_{c'\neq c_u}\mathcal{P}_{c'}$ is supported on the set of activations that lie in $\bigcup_{c'\neq c_u}\mathcal{R}_{c'}^{(\rho)}$. We invoke the following regularity assumption, which we make explicit:
+
+\smallskip
+\noindent\emph{(Mass-volume regularity).} The push-forward measure of $\mathcal{P}_{-u}$ under $\boldsymbol{\Phi}_\theta$ places mass on $\mathcal{O}$ in proportion to its volume share of the support, i.e.\ $\Pr_{p\sim\mathcal{P}_{-u}}[\boldsymbol{\Phi}_\theta(p) \in \mathcal{O}] \geq \kappa(c_u,\rho)$. This holds when activations within each $\mathcal{R}_{c'}^{(\rho)}$ are sampled approximately uniformly under $\mathcal{P}_{c'}$.
+\smallskip
+
+For any prompt $p\sim\mathcal{P}_{-u}$ with $\boldsymbol{\Phi}_\theta(p)\in\mathcal{O}$, we have $\boldsymbol{\Phi}_\theta(p)\in\mathcal{R}_{c_u}^{(\rho)}$, so the displacement floor from Step~1 applies (extending~\cref{asm:edit} from $\mathcal{R}_{c_u}$ to its closed $\rho$-neighborhood by continuity of the displacement field): $\|\boldsymbol{\Phi}_{\hat\theta}(p)-\boldsymbol{\Phi}_\theta(p)\|_2 \geq \Delta$. Combining with the mass-volume regularity gives
+\begin{align}
+    \mathbb{E}_{p\sim \mathcal{P}_{-u}}
+    \!\left[\|\boldsymbol{\Phi}_{\hat{\theta}}(p)-\boldsymbol{\Phi}_{\theta}(p)\|_2\right]
+    &\;\geq\; \Pr_{p\sim\mathcal{P}_{-u}}\!\left[\boldsymbol{\Phi}_\theta(p)\in\mathcal{O}\right]\cdot\Delta \notag\\
+    &\;\geq\; \kappa(c_u,\rho)\cdot\Delta. \label{eq:proof_step2}
+\end{align}
+
+\medskip
+\noindent\textbf{Step 3: Deriving the trade-off inequality.}
+
+Substituting the displacement floor~\eqref{eq:proof_delta_floor} into~\eqref{eq:proof_step2} gives
+\begin{equation}
+    \mathbb{E}_{p\sim \mathcal{P}_{-u}}
+    \left[
+    \|\boldsymbol{\Phi}_{\hat{\theta}}(p)-\boldsymbol{\Phi}_{\theta}(p)\|_2
+    \right]
+    \geq
+    \kappa(c_u,\rho)\frac{1-\varepsilon}{L}.
+\end{equation}
+Since~\cref{def:neighbor} bounds the left-hand side above by $\gamma$, we obtain
+\begin{equation}
+    \gamma
+    \geq
+    \kappa(c_u,\rho)\frac{1-\varepsilon}{L}.
+\end{equation}
+Rearranging (for $\kappa(c_u,\rho) > 0$) yields
+\begin{equation}
+    \varepsilon
+    \geq
+    1-\frac{L\gamma}{\kappa(c_u,\rho)}.
+\end{equation}
+This completes the proof.
+\end{proof}
+
+
+
+\paragraph{Remark on metric compatibility.}
+The proof uses the $\ell_2$ metric throughout because~\cref{asm:lip} is stated in $\ell_2$. Our $\hat\kappa$ estimator (\cref{app:kappa_estimation}) instead uses cosine distance to characterize region membership. These two choices are compatible at the level of the geometric objects in the bound: for unit-normalized activations, $\|\mathbf{a} - \mathbf{b}\|_2^2 = 2\,d_{\cos}(\mathbf{a}, \mathbf{b})$, so the two metrics induce the same topology on the activation sphere and define the same fattened regions $\mathcal{R}_c^{(\rho)}$ and entanglement coefficient $\kappa(c_u,\rho)$ up to a monotone re-parameterization of the radius $\rho$. This re-parameterization is absorbed into the choice of $\rho$ in our empirical $\hat\kappa$ estimator. Consequently, estimating $\kappa$ via cosine distance while applying the theoretical bound under an $\ell_2$ Lipschitz assumption is internally consistent: the bound's set-theoretic content (volume overlap of $\rho$-neighborhoods) transfers between metrics, while the Lipschitz constant $L$ remains tied to the $\ell_2$ formulation in which~\cref{asm:lip} is stated.
+% The proof uses the $\ell_2$ metric throughout because~\cref{asm:lip} is stated in $\ell_2$. Our $\hat\kappa$ estimator (\cref{app:kappa_estimation}) instead uses cosine distance to characterize region membership. These two choices are compatible: for unit-normalized activations, $\|\mathbf{a} - \mathbf{b}\|_2^2 = 2\,d_{\cos}(\mathbf{a}, \mathbf{b})$, so an $L$-Lipschitz function under the $\ell_2$ metric is $(L\sqrt{2})$-Lipschitz under cosine distance. 
+
+% The set-theoretic objects appearing in the bound—namely the fattened regions $\mathcal{R}_c^{(\rho)}$ and the entanglement coefficient $\kappa(c_u,\rho)$, defined via the volume overlap between $\mathcal{R}_{c_u}^{(\rho)}$ and $\bigcup_{c' \neq c_u}\mathcal{R}_{c'}^{(\rho)}$—retain the same geometric interpretation under either metric up to this constant factor. This factor can be absorbed into $L$, so the bound remains valid. Consequently, estimating $\kappa$ via cosine distance while applying the theoretical bound under an $\ell_2$ Lipschitz assumption is internally consistent.
+
+
+% ============================================================
+\begin{comment}
+    
+
+\section{Discussion of Assumptions}
+\label{app:assumptions}
+% ============================================================
+
+\paragraph{Assumption~\cref{asm:lip} (Lipschitz continuity).}
+The Lipschitz assumption on the mapping from activation space to concept generation probability is standard in the analysis of neural networks. Deep networks with bounded weights and smooth activation functions satisfy local Lipschitz conditions, and empirical studies of diffusion model representations suggest that the cross-attention outputs vary smoothly with respect to input perturbations. We note that Assumption~\cref{asm:lip} is required to hold only locally within the activation regions $\mathcal{R}_c$ and their neighborhoods, not globally over all of $\mathcal{Z}$.
+
+In practice, the Lipschitz constant $L$ may vary across different regions of activation space. The bound in Theorem~\cref{thm:tradeoff} uses the worst-case (largest) $L$ over the relevant region. A tighter analysis could exploit local Lipschitz constants, potentially yielding sharper bounds for specific concept pairs.
+
+\paragraph{Assumption~\cref{asm:edit} (Minimum displacement).}
+This assumption is not independent; it follows directly from Assumption~\cref{asm:lip} combined with the requirement of $\varepsilon$-robust unlearning. If the generation probability must be reduced from ${\sim}1$ to ${<}\varepsilon$, the Lipschitz condition implies a minimum activation displacement of $(1-\varepsilon)/L$. We state it as a separate assumption for clarity of exposition.
+
+The assumption requires uniform displacement over the entire activation region $\mathcal{R}_{c_u}$. In practice, unlearning methods may apply non-uniform displacement---suppressing some subregions more aggressively than others. This non-uniformity means the bound in Theorem~\ref{thm:tradeoff} is conservative: the actual collateral damage may be less than the lower bound if the displacement is concentrated in subregions with low neighbor overlap. Characterizing non-uniform displacement fields is an interesting direction for future work (see Remark~\ref{rem:tightness}).
+
+
+% ============================================================
+\section{Contextual Concept Leakage: Formal Threat Model}
+\label{app:threat_model}
+% ============================================================
+
+In the main text, we describe concept leakage as an empirical phenomenon (Section~\ref{subsec:two_sides}). Here we provide its formal definition as an adversarial threat model, which may be of independent interest.
+
+\subsection{Preliminaries}
+
+We consider a pretrained text-to-image latent diffusion model $D_{\theta}$ with parameters $\theta$. Given a text prompt $p \in \mathcal{P}$, the model generates an image $x \in \mathcal{X}$ by sampling from the conditional distribution $p_{\theta}(x \mid p)$.
+
+In latent diffusion models~\citep{rombach2022high}, an image $x$ is first encoded into a latent representation $z = E(x)$ using a pretrained variational autoencoder (VAE). The diffusion model operates in the latent space $\mathcal{Z}$ and learns to reverse a forward noising process. Specifically, given a noisy latent $z_t$ at diffusion timestep $t$, a U-Net denoiser $\epsilon_{\theta}$ is trained to predict the noise $\epsilon$ added to the latent:
+\begin{equation}
+\mathcal{L}_{\text{LDM}} =
+\mathbb{E}_{x,\epsilon,t}
+\left[
+\left\|
+\epsilon - \epsilon_{\theta}(z_t, t, \mathbf{e}_p)
+\right\|_2^2
+\right],
+\end{equation}
+where $\epsilon \sim \mathcal{N}(0,I)$ and $\mathbf{e}_p = f_\psi(p) \in \mathbb{R}^d$ is the text embedding produced by a text encoder $f_\psi$, which conditions the denoising network through cross-attention layers.
+
+We denote by $c \in \mathcal{C}$ a visual concept (e.g., \texttt{horse}) associated with a token $t_c$ and a distribution of prompts $\mathcal{P}_c \subseteq \mathcal{P}$.
+
+\subsection{Concept Unlearning Objective}
+
+Concept unlearning seeks updated parameters $\theta'$ satisfying two objectives. First, the probability that generated images contain the target concept should be minimized:
+\begin{equation}
+\Pr_{x \sim p_{\theta'}(\cdot \mid p)}[c \in x] \approx 0,
+\quad \forall p \sim \mathcal{P}_c.
+\end{equation}
+Second, the updated model should preserve its original generation behavior for unrelated prompts:
+\begin{equation}
+p_{\theta'}(x \mid p) \approx p_{\theta}(x \mid p),
+\quad \forall p \notin \mathcal{P}_c.
+\end{equation}
+Existing methods typically operationalize this by suppressing the influence of the concept token $t_c$ during fine-tuning or inference, implicitly assuming that the visual concept can be localized to specific lexical tokens.
+
+\subsection{Adversarial Threat Model}
+
+We define the adversarial setting that formalizes contextual concept leakage.
+
+\paragraph{Adversary Goal.}
+Generate an image containing concept $c$ using the unlearned model $D_{\theta'}$ without explicitly referencing $t_c$.
+
+\paragraph{Adversary Strategy.}
+Construct a prompt
+\begin{equation}
+p_{\text{adv}} = \{t_1, \dots, t_k\}, \quad \text{where } S_c \subseteq p_{\text{adv}}, \; t_c \notin p_{\text{adv}},
+\end{equation}
+where $S_c$ is a set of tokens that frequently co-occur with $t_c$ in training captions.
+
+\paragraph{Failure Condition.}
+We say unlearning fails under contextual concept leakage if
+\begin{equation}
+\Pr_{x \sim p_{\theta'}(\cdot \mid p_{\text{adv}})}[c \in x] > \epsilon,
+\end{equation}
+for a non-negligible threshold $\epsilon$, despite successful suppression for prompts containing $t_c$.
+
+This definition captures the key vulnerability identified in Section~\ref{subsec:two_sides}: the persistence of an unlearned concept through correlated context tokens rather than explicit mention. In the framework of Theorem~\ref{thm:tradeoff}, concept leakage corresponds to a large $\varepsilon$: the method fails to achieve robust unlearning because portions of $\mathcal{R}_{c_u}$ remain unsuppressed.
+
+
+% ============================================================
+\section{Text-in-Image Prompt Injection}
+\label{app:text_in_image}
+% ============================================================
+
+We describe an additional attack vector that provides further evidence for concept entanglement but is tangential to the main tradeoff analysis.
+
+We generate images using the original (non-unlearned) model with prompts that explicitly reference the target concept while requesting embedded text, for example: \emph{``two cowboys talking about a horse, with subtitles.''}  The generated images often contain visible textual elements describing the concept. We then extract this text using an OCR system and use it as a new prompt for the unlearned model.
+
+Surprisingly, these OCR-extracted prompts frequently cause the unlearned model to regenerate images containing the target concept, even though the original concept token is not explicitly provided. This attack demonstrates that concept reactivation can occur through indirect textual signals embedded in generated content, further supporting the hypothesis that concept representations are distributed across multiple correlated tokens and contexts rather than localized to individual words.
+
+While this attack is interesting in its own right, it operates through the same mechanism as the contextual concept leakage described in Section~\ref{subsec:two_sides}: the OCR-extracted text provides a bag of correlated tokens that collectively reconstruct the concept embedding. We therefore treat it as supplementary evidence rather than a core contribution.
+
+
+% ============================================================
+\section{Unlearning Methods: Detailed Descriptions}
+\label{app:methods}
+% ============================================================
+
+We provide detailed descriptions of all seven baseline methods evaluated in Section~\ref{sec:experiment}, grouped by mechanism type.
+
+\subsection{Fine-Tuning Methods}
+
+\paragraph{ESD (Erased Stable Diffusion)~\citep{gandikota2023erasing}.}
+Retrains the model with negative guidance so that prompts containing the target token produce outputs aligned with a neutral anchor prompt. The model is fine-tuned to minimize the conditional score in the direction of the concept, effectively steering generation away from the target.
+
+\paragraph{FMN (Forget-Me-Not)~\citep{zhang2024forget}.}
+Applies a re-steering loss to the attention layers, redirecting the model's attention away from concept-associated tokens while preserving attention patterns for non-target content.
+
+\paragraph{CA (Concept Ablation)~\citep{vinker2023concept}.}
+Decomposes concepts into constituent visual elements and ablates the model's ability to generate the target concept by modifying the weights associated with these elements.
+
+\paragraph{UCE (Unified Concept Editing)~\citep{gandikota2024unified}.}
+Provides a unified framework for editing multiple concepts simultaneously by modifying cross-attention projections using a closed-form solution derived from the model's weight matrices.
+
+\paragraph{SA (Selective Amnesia)~\citep{heng2023selective}.}
+Adapts continual learning techniques to the forgetting setting, using an EWG-style regularizer to protect important weights for retained concepts while allowing modification of weights associated with the target concept.
+
+\paragraph{SalUn (Saliency Unlearning)~\citep{fan2023salun}.}
+Identifies the most salient weights for the target concept via gradient-based saliency maps and modifies only those weights, aiming to minimize disruption to non-target generation.
+
+\paragraph{EDiff (EraseDiff)~\citep{wu2024erasediff}.}
+Erases concepts by fine-tuning the model to reduce the influence of the target concept's data on the learned distribution, drawing on principles from data influence estimation.
+
+\paragraph{SHS (ScissorHands)~\citep{wu2024scissorhands}.}
+Identifies and severs the most sensitive connections in the network related to the target concept, based on connection sensitivity analysis, while preserving other pathways.
+
+\subsection{Adversarially Robust Fine-Tuning Methods}
+
+\paragraph{AdvUnlearn~\citep{zhang2024defensive}.}
+Incorporates adversarial training into the unlearning process via bilevel optimization: the inner loop generates adversarial prompts that attempt to recover the erased concept, and the outer loop updates model parameters to defend against these prompts. Requires curated external data to preserve utility.
+
+\paragraph{STEREO~\citep{srivatsan2025stereo}.}
+A two-stage framework. The first stage (\emph{Search Thoroughly Enough}) uses iterative adversarial training to identify strong adversarial prompts---optimized embedding vectors that can regenerate the erased concept. The second stage (\emph{Robustly Erase Once}) uses an anchor-concept-based compositional objective to erase the concept from the original model in a single fine-tuning pass, incorporating the adversarial prompts from the first stage. STEREO achieves strong robustness by suppressing a broad region of the concept's embedding space, which by our Theorem~\ref{thm:tradeoff} implies larger collateral damage on neighboring concepts.
+
+\subsection{Inference-Time Methods}
+
+\paragraph{SPM (Single Precision Module)~\citep{lyu2024one}.}
+Inserts lightweight one-dimensional adapters after each linear and convolutional layer to block the propagation of concept-specific information during inference. The model weights remain unmodified.
+
+\paragraph{SEOT (Suppression via Embedding Optimization)~\citep{li2024get}.}
+Suppresses unwanted content by optimizing text embeddings at inference time to steer generation away from the target concept while preserving generation quality for non-target prompts.
+
+\paragraph{SAeUron~\citep{cywinski2025saeuron}.}
+Trains sparse autoencoders (SAEs) on the cross-attention activations of the diffusion model to learn a dictionary of interpretable, monosemantic features. Unlearning is achieved at inference time by identifying features that correspond to the target concept (via an importance score) and ablating them---setting their activations to zero or scaling by a negative multiplier $\gamma_c$. Only $\tau_c$ features are blocked per concept (typically $\tau_c = 1$ for style unlearning), making the intervention highly sparse. This sparsity explains SAeUron's superior neighbor preservation: it operates in a low-dimensional subspace of $\mathcal{R}_{c_u}$, producing minimal displacement in the broader activation space (see Remark~\ref{rem:saeuron}).
+
+
+% ============================================================
+\section{Implementation Details}
+\label{app:implementation}
+% ============================================================
+
+\paragraph{Base model.}
+We use Stable Diffusion v1.4~\citep{rombach2022high} fine-tuned on the \textsc{UnlearnCanvas}~\citep{zhang2024unlearncanvas} training set. Fine-tuning follows the protocol of~\citet{zhang2024unlearncanvas}: [specify learning rate, epochs, batch size, and hardware]. The fine-tuned model serves as the base model $\mathcal{D}_\theta$ from which all concept-erased models are derived.
+
+\paragraph{Classifiers.}
+We use the ViT-based style and object classifiers provided by~\citet{zhang2024unlearncanvas}, which achieve $98.8\%$ style classification accuracy and [X\%] object classification accuracy on generated images from the base model. These classifiers are used to compute UA, IRA, and CRA.
+
+\paragraph{Image generation.}
+All image generation uses 50 DDIM sampling steps with classifier-free guidance scale 7.5. For each concept--method pair, we generate $N = 500$ images using the standard \textsc{UnlearnCanvas} prompt templates. Seeds are fixed for reproducibility.
+
+\paragraph{Indirect prompts for IRR evaluation.}
+To compute the Indirect Recovery Rate (IRR), we construct a set of indirect prompts for each target concept. These prompts omit the target token but include semantically correlated context. For object concepts, we use prompts constructed from the concept's typical co-occurrence context (e.g., for \texttt{horse}: \emph{``Image of the animal a jockey rides at the racetrack''}, \emph{``A royal procession with decorated ceremonial mounts''}). For each target concept, we use [X] indirect prompts and generate [X] images per prompt. Full prompt lists are provided in Table~\ref{tab:indirect_prompts}.
+
+\paragraph{Neighbor concept sets.}
+For the Neighbor Preservation (NP) metric, we define semantic neighborhoods as follows:
+\begin{itemize}[leftmargin=*,itemsep=1pt,topsep=2pt]
+    \item \texttt{horse}: $\mathcal{N} = \{\texttt{deer}, \texttt{zebra}, \texttt{giraffe}\}$ (visually similar quadrupeds)
+    \item \texttt{cat}: $\mathcal{N} = \{\texttt{dog}, \texttt{rabbit}\}$ (domestic animals sharing contextual tokens)
+    \item \texttt{jellyfish}: $\mathcal{N} = \{\texttt{fishes}, \texttt{sea}\}$ (marine concepts)
+    \item Style neighbors: determined by the art style hierarchy (parent and sibling styles)
+\end{itemize}
+
+\paragraph{Style hierarchy construction.}
+We construct a hierarchical grouping of the 60 \textsc{UnlearnCanvas} artistic styles by mapping child styles to parent art movements. The hierarchy is constructed based on established art-historical categorizations. % TODO: Add details of hierarchy construction, possibly a figure showing the tree
+
+\paragraph{Method-specific hyperparameters.}
+For all baseline methods, we use the default hyperparameters specified in their respective publications. For methods requiring additional choices (e.g., STEREO's number of adversarial prompts $K = 2$, SAeUron's $\tau_c = 1$ and $\gamma_c = -1$ for style unlearning), we follow the authors' recommended settings. % TODO: Add a table of key hyperparameters per method
+
+
+% ============================================================
+\section{Additional Results}
+\label{app:additional_results}
+% ============================================================
+
+\subsection{Per-Concept Tradeoff Analysis}
+\label{app:per_concept}
+
+% TODO: Add a table showing UA, IRR, and NP for each target concept individually,
+% organized by estimated κ (high to low). This supports Q2 in the main text.
+
+\subsection{Per-Method Detailed Metrics}
+\label{app:per_method}
+
+% TODO: Add full per-method results tables with all metrics broken down by 
+% target concept (style and object), including standard deviations.
+
+\subsection{Indirect Prompt Lists}
+\label{app:prompts}
+
+% TODO: Provide the full list of indirect prompts used for IRR evaluation,
+% organized by target concept.
+
+\begin{table*}[t]
+\centering
+\caption{Indirect prompts used for IRR evaluation. Each prompt omits the target concept token but includes semantically correlated context.}
+\label{tab:indirect_prompts}
+\small
+\begin{tabular}{l l}
+\toprule
+\textbf{Target Concept} & \textbf{Indirect Prompts} \\
+\midrule
+\texttt{horse} & ``Image of the animal a jockey rides at the racetrack'' \\
+& ``Image of a pony in a country fair'' \\
+& ``A royal procession with decorated ceremonial mounts'' \\
+& ``A cowboy roping cattle on a dusty ranch'' \\
+& ``Person riding through a ranch field'' \\
+\midrule
+\texttt{cat} & % TODO: Add indirect prompts for cat \\
+\midrule
+\texttt{jellyfish} & % TODO: Add indirect prompts for jellyfish \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Sequential Unlearning: Full Results}
+\label{app:sequential}
+
+% TODO: Add the full sequential unlearning results table showing UA and RA 
+% after each sequential erasure step, for all methods. Include the 6-step 
+% style sequence (Abstractionism, Byzantine, Cartoon, Cold Warm, Ukiyoe, Van Gogh)
+% following the protocol of SAeUron and UnlearnCanvas.
+
+\subsection{Hierarchical Style Unlearning: Confusion Matrices}
+\label{app:hierarchical}
+
+% TODO: Add confusion-matrix-style heatmaps showing where erased-concept outputs 
+% get reclassified. Expected pattern: concentration along parent/sibling styles
+% rather than uniform distribution, providing visual evidence of hierarchical
+% reversion
+\end{comment}

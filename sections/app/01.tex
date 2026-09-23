@@ -1,0 +1,35 @@
+\section{Formal Definition of Concept Activation Regions}
+\label{app:concept_regions}
+This appendix provides the formal construction of the concept activation function $\boldsymbol{\Phi}_\theta$ and activation region $\mathcal{R}_c$ used throughout~\cref{sec:tradeoff}. The compressed version in the main text specifies these informally; the definition here is the formal object used in the proofs of~\cref{thm:tradeoff}.
+
+\begin{definition}[Concept activation function and region]
+\label{def:activation}
+Fix a UNet layer $\ell^*$ and denoising timestep $t^* \in \{1,\ldots,T\}$. Let $p \in \mathcal{P}$ denote a text prompt and $\mathbf{e}_p = f_\psi(p)$ be its text embedding. The \emph{concept activation function} of the pretrained model is
+\begin{equation}
+    \boldsymbol{\Phi}_{\theta, \ell^*,t^*}(p) \;=\; \mathrm{A}_{\theta}(\mathbf{e}_p,\ell^*,t^*) \in \mathcal{H},
+\end{equation}
+where $\mathrm{A}_{\theta}(\mathbf{e}_p, \ell^*, t^*)$ denotes the cross-attention output 
+%\varun{perhaps avoid cal A? which is commonly used for algorithm or adversary? can use A?}
+of $\epsilon_\theta$ at layer $\ell^*$ and timestep $t^*$, and $\mathcal{H} := \mathbb{R}^{d_{\ell^*}}$ is the corresponding activation space. 
+Throughout, we suppress the dependence on $\ell^*$ 
+and $t^*$ and write $\boldsymbol{\Phi}_\theta(p)$ for brevity.
+Analogously, $\boldsymbol{\Phi}_{\hat{\theta}}(p)$ denotes the activation function of the CEM $\mathcal{D}_{\hat\theta}$.
+
+For a concept $c \in \mathcal{C}$, its \emph{activation region} is
+\begin{equation}
+    \mathcal{R}_c
+    \;=\;
+    \Bigl\{
+        \boldsymbol{\Phi}_{\theta}(p)
+        \;\Big|\;
+        p \in \mathcal{P},\;
+        \mathbb{O}_{\mathcal{X}}\!\left(\mathbf{x}_{\theta}(p),\, c\right) = 1
+    \Bigr\}
+    \;\subseteq\; \mathcal{H},
+\end{equation}
+% \ali{this also depends on $\ell^*,t^*$} 
+where $\mathbb{O}_{\mathcal{X}} : \mathcal{X} \times \mathcal{C} \to \{0,1\}$ is an oracle indicating whether concept $c$ is present in image $\mathbf{x}$, and $\mathbf{x}_{\theta}(p) \sim p_{\theta}(\cdot \mid p)$ denotes an image sampled from $\mathcal{D}_\theta$ conditioned on prompt $p$.
+\end{definition}
+
+\paragraph{On the oracle classifier.}
+The predicate $c \in \text{image}(\mathbf{x})$ is specified as an oracle classifier rather than a specific model because our results are independent of the particular choice. Any reasonable concept detector induces a concept region $\mathcal{R}_c$, and the tradeoff in~\cref{thm:tradeoff} holds with respect to whichever classifier is fixed. In~\cref{sec:experiment}, we instantiate this oracle with a CLIP-based classifier, detailed in~\cref{app:evaluation_setup}. 

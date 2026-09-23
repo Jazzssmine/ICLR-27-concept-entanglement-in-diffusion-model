@@ -1,0 +1,61 @@
+\section{Direct Validation: Activation Displacement Scales with $\hat\kappa$}
+\label{app:displacement_kappa}
+\Cref{thm:tradeoff} predicts that activation displacement at neighbor prompts scales linearly with $\kappa$ for a method achieving $\varepsilon$-robust erasure. The Neighbor Preservation (NP) measure used in~\Cref{sec:experiment} is a probability-units proxy for this displacement, related through~\cref{asm:lip}. To test~\Cref{thm:tradeoff}'s prediction in the units the theorem is stated in, we measure activation displacement directly:
+\[
+\Delta_{\text{neighbor}}(c_u) \;=\; \mathbb{E}_{p_{c'} \sim \mathcal{N}_\delta(c_u)}\!\left[\, \big\| \Phi_{\hat\theta}(p_{c'}) - \Phi_\theta(p_{c'}) \big\|_2 \,\right]
+\]
+% We measure $\Delta_{\text{neighbor}}$ for each fine-tuning method on each of the five target concepts using $200$ neighbor prompts per concept, with activations captured from \texttt{up\_blocks.1.attentions.1} at DDIM step $25$ of $50$. Inference-time methods are omitted: SEOT's text-embedding intervention does not propagate measurably to this layer in $L_2$ distance, and SAeUron's sparse-feature ablation produces displacement values an order of magnitude larger than fine-tuning methods, reflecting a real mechanism difference rather than direct comparability with weight-update methods.
+We measure $\Delta_{\text{neighbor}}$ for each fine-tuning method on each of the five target concepts using $200$ neighbor prompts per concept, with activations captured from \texttt{up\_blocks.1.attentions.1} at DDIM step $25$ of $50$. Activations are flattened across spatial and token dimensions before computing $L_2$ distances, so absolute magnitudes here are larger than the mean-pooled token-level magnitudes reported in~\cref{app:displacement} (\cref{fig:displacement}); both views are consistent in ordering and in the prediction they probe (within-target ordering in~\cref{app:displacement}, cross-target $\hat\kappa$-scaling here). Inference-time methods are omitted: SEOT's text-embedding intervention does not propagate measurably to this layer in $L_2$ distance, and SAeUron's sparse-feature ablation produces displacement values an order of magnitude larger than fine-tuning methods, reflecting a real mechanism difference rather than direct comparability with weight-update methods.
+
+\paragraph{Displacement scales monotonically with $\hat\kappa$.}
+\Cref{tab:displacement} reports mean neighbor displacement across the five concepts and five fine-tuning methods. Four of five methods exhibit positive Spearman rank correlation between $\hat\kappa$ and displacement, with ESD showing strict monotonicity ($\rho = +1.00$) and STEREO closely tracking ($\rho = +0.90$ with a single inversion between \texttt{cat} and \texttt{horse}, whose $\hat\kappa$ values differ by only $0.04$). Across all five methods, displacement on \texttt{castle} ($\hat\kappa = 0.27$) is substantially lower than the average displacement across the four high-$\hat\kappa$ animal concepts: ratios range from $1.68\times$ (ESD) to $3.18\times$ (STEREO). The qualitative form predicted by \Cref{thm:tradeoff} --- displacement increasing with $\hat\kappa$ --- is empirically supported.
+
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccccc|c}
+\toprule
+\textbf{Method} & \texttt{castle} & \texttt{cat} & \texttt{horse} & \texttt{bear} & \texttt{dog} & Spearman $\rho$ \\
+& ($\hat\kappa{=}0.27$) & ($0.77$) & ($0.81$) & ($0.82$) & ($0.89$) & vs.\ $\hat\kappa$ \\
+\midrule
+ESD        & 128.4 & 194.8 & 213.6 & 221.0 & 235.4 & $+1.00$ \\
+STEREO     & \phantom{0}75.9 & 234.2 & 233.4 & 240.9 & 257.0 & $+0.90$ \\
+AdvUnlearn & \phantom{0}71.6 & 110.5 & 150.9 & 123.2 & 123.7 & $+0.70$ \\
+EDiff      & \phantom{0}67.8 & 163.0 & 178.1 & 172.1 & 175.6 & $+0.70$ \\
+SalUn      & \phantom{0}88.1 & 220.7 & 215.6 & 220.4 & 215.3 & $+0.10$ \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Mean activation displacement at neighbor prompts.} Each cell reports $\Delta_{\text{neighbor}}$ in $L_2$ activation distance, averaged over $200$ neighbor prompts. Spearman $\rho$ is computed across the five concepts. Note that $n = 5$ concepts limits the statistical power of significance testing on individual methods; we report $\rho$ as a descriptive monotonicity measure. The consistency of positive correlations across four of five methods (range $+0.10$ to $+1.00$) provides aggregate evidence for the $\kappa$-scaling predicted by~\Cref{thm:tradeoff}.}
+\label{tab:displacement}
+\end{table}
+
+\paragraph{STEREO's displacement is consistent with a single local Lipschitz constant.}
+\Cref{thm:tradeoff} predicts that for a method operating exactly at the bound, the ratio $\kappa(1-\varepsilon)/(\Delta_{\text{neighbor}} + \delta)$ should equal a single Lipschitz constant $L$ across all concepts. We compute this ratio for each method using STEREO's saturated $\varepsilon \approx 0.035$ (mean IRR across the five concepts; see~\cref{tab:main_results_avg})  and $\delta = 0.05$. The resulting $L_{\text{tight}}$ values are reported in~\Cref{tab:l_tight}. STEREO's $L_{\text{tight}}$ varies by only $7.8\%$ across the five concepts ($L \in [0.0032, 0.0035]$); other methods exhibit spreads of $24\%$ to $57\%$. STEREO's single-$L$ consistency is precisely the quantitative prediction of \Cref{thm:tradeoff}: a method operating at the bound should exhibit a $\kappa$-and-concept-independent local Lipschitz constant. Among the five methods evaluated, only STEREO satisfies this prediction, consistent with STEREO occupying the high-$\Delta$, low-$\varepsilon$ regime where the bound is tightest.
+
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Method} & \texttt{castle} & \texttt{cat} & \texttt{horse} & \texttt{bear} & \texttt{dog} & Spread \\
+\midrule
+\textbf{STEREO} & 0.0035 & 0.0032 & 0.0034 & 0.0033 & 0.0034 & \textbf{7.8\%} \\
+EDiff           & 0.0039 & 0.0046 & 0.0045 & 0.0047 & 0.0050 & 23.6\% \\
+SalUn           & 0.0030 & 0.0034 & 0.0037 & 0.0036 & 0.0040 & 29.5\% \\
+ESD             & 0.0021 & 0.0039 & 0.0037 & 0.0036 & 0.0037 & 53.4\% \\
+AdvUnlearn      & 0.0037 & 0.0068 & 0.0053 & 0.0065 & 0.0070 & 57.1\% \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Per-concept $L_{\text{tight}}$ values.} $L_{\text{tight}} = \kappa(1-\varepsilon)/(\Delta_{\text{neighbor}} + \delta)$ is the Lipschitz constant value that places \Cref{thm:tradeoff}'s bound exactly at the observed displacement. If a method operates at the bound, $L_{\text{tight}}$ should be approximately constant across concepts. STEREO is the only method exhibiting this consistency ($7.8\%$ spread), supporting its operation at the bound's saturated-erasure regime.}
+\label{tab:l_tight}
+\end{table}
+
+\paragraph{Local versus global Lipschitz.}
+The local $L \approx 0.0034$ inferred from STEREO's displacement is much smaller than the global $\hat L = 0.174$ reported in~\Cref{fig:lipschitz}. This reflects the well-known phenomenon that probability changes saturate near classification decision boundaries: the global Lipschitz constant measured across diverse prompt-pair perturbations averages over both saturated and unsaturated regimes, while the local constant near $\mathcal{R}_{c_u}$ during erasure reflects unsaturated behavior specifically. The two values are compatible measurements of different but related quantities; principled estimation of $L$ that distinguishes these regimes is a direction for future work.
+% \paragraph{Hierarchical metrics (for style experiments).}
+% For style unlearning experiments, we additionally report:
+% \begin{itemize}
+% \item \emph{Parent Reversion Rate (PRR)}: the fraction of images generated from prompts targeting an erased child style $S_{\mathrm{child}}$ that are classified as either the parent style $S_{\mathrm{parent}}$ or a sibling style $S_{\mathrm{sibling}}$. A PRR substantially above the base rate indicates structured reversion toward nearby styles rather than random degradation.
+% \end{itemize}

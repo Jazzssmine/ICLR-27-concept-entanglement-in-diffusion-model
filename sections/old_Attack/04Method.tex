@@ -1,0 +1,160 @@
+\section{Method Roadmap}
+\label{sec:method_roadmap}
+
+Main story: {robust concept unlearning may suppress direct lexical access to a concept without fully removing all semantic pathways to that concept}. 
+
+\paragraph{Main paper goal.}
+The central contribution should be a \emph{model-informed concept recovery attack} that targets the strongest unlearning method. And our research questions are:
+\begin{enumerate}
+    \item Which concept-related semantic regions may be under-covered by the robust unlearning pipeline?
+    \item Which of those regions still preserve residual alignment with the target concept inside the unlearned model?
+    \item Which internal components or pathways causally contribute to recovery of the target concept?
+\end{enumerate}
+
+\subsection{Main Experiments}
+\label{subsec:must_have_components}
+
+The following components are the minimum set needed for a coherent and competitive submission.
+
+\paragraph{(1) Main attack: model-informed recovery attack.}
+\begin{enumerate}
+    \item construct a pool of candidate horse-related cues or prompt factors;
+    \item rank these cues using a model-informed score derived from the unlearned model;
+    \item compose candidate prompts from the highest-ranked cues;
+    \item optimize prompt combinations using a black-box search method (e.g., evolutionary search or beam search);
+    \item evaluate whether the resulting prompts recover the erased concept.
+\end{enumerate}
+
+\paragraph{(2) Coverage-side analysis for candidate prompt discovery.}
+Rather than comparing full caption distributions, which would be computationally expensive and difficult to justify, we recommend comparing \emph{semantic coverage in factor space}. Concretely, define a small set of interpretable factor families:
+\begin{itemize}
+    \item roles (e.g., cowboy, rider, jockey, knight),
+    \item scenes (e.g., ranch, stable, racetrack, battlefield),
+    \item objects (e.g., saddle, reins, carriage, fence),
+    \item actions (e.g., riding, jumping, pulling),
+    \item styles or domains (e.g., western, comic, medieval).
+\end{itemize}
+Then compare:
+\begin{itemize}
+    \item a proxy set of horse-associated prompts from the broader data distribution; and
+    \item the prompts, paraphrases, or auxiliary captions used by the robust unlearning method.
+\end{itemize}
+The goal is to identify factor families that are covered by the broader horse-associated prompt space but are weakly covered by the auxiliary unlearning prompt space.
+
+\paragraph{(3) Representation-side analysis for cue ranking.}
+The representation analysis should help determine which cues still preserve horse-related signal inside the robust unlearned model. The goal is not to claim that a single component ``stores'' the horse concept, but rather to measure which cues still align with residual horse-related pathways.
+
+A practical first version is to compare, for selected prompts:
+\begin{itemize}
+    \item text encoder hidden states,
+    \item cross-attention outputs,
+    \item selected UNet activations or denoising latents across timesteps,
+\end{itemize}
+between the base model and the robust unlearned model. These signals can be used to define a cue score that ranks which semantic cues are most promising for attack construction.
+
+\paragraph{(4) Strong baseline comparisons.}
+The paper will need to show that the proposed attack improves over weaker alternatives. At minimum, compare against:
+\begin{itemize}
+    \item direct prompts,
+    \item bag-of-words prompts,
+    \item manually written semantic prompts,
+    \item generic prompt optimization without model-informed guidance.
+\end{itemize}
+This comparison is essential to justify that the new method is not simply another search loop.
+
+\paragraph{(5) Robustness--specificity evaluation.}
+The paper should preserve the empirical insight that stronger suppression often comes with collateral forgetting of neighboring concepts. Thus the final evaluation should include both:
+\begin{itemize}
+    \item \textbf{recovery metrics}: whether the target concept can still be recovered;
+    \item \textbf{neighbor preservation metrics}: whether related concepts such as \texttt{deer}, \texttt{zebra}, and \texttt{giraffe} remain intact.
+\end{itemize}
+This ensures that the attack is linked to the broader scientific question of how concept representations are altered under unlearning.
+
+\subsection{Nice-to-Have Components}
+\label{subsubsec:nice_to_have_components}
+
+The following components would substantially strengthen the paper, but are not strictly necessary for the first complete submission draft.
+
+\paragraph{(6) Causal tracing / perturb-and-restore analysis.}
+Inspired by ROME, one promising extension is to identify \emph{residual causal pathways} for the erased concept in the diffusion model. A lightweight version would:
+\begin{enumerate}
+    \item run the base and robust unlearned models on direct and indirect prompts;
+    \item cache selected cross-attention maps, UNet activations, or denoising latents;
+    \item perturb or suppress candidate concept-relevant states;
+    \item restore selected states from the base model into the unlearned run;
+    \item measure whether restoration increases horse recovery.
+\end{enumerate}
+This would provide stronger evidence that the attack is exploiting genuine residual pathways rather than superficial correlations.
+
+\paragraph{(7) Base-model-as-teacher scoring.}
+A stronger attack variant may use the original pretrained model as a semantic teacher. The key idea is to prioritize prompts that strongly evoke the target concept in the base model, then test whether these prompts still recover the concept in the unlearned model. This would make the candidate space more semantically grounded and may be especially helpful for attacking the strongest unlearning method.
+
+\paragraph{(8) Contrastive attack objective.}
+A useful extension is to define the attack contrastively with respect to the base and unlearned models, so that prompts are rewarded not only for recovering the target concept in the unlearned model, but also for exhibiting only a small reduction relative to the base model. This could improve stability and interpretability of the search.
+
+\paragraph{(9) Interpretable factor/pathway visualizations.}
+If feasible, the paper would benefit from visual summaries showing:
+\begin{itemize}
+    \item factor families covered by the original prompt proxy vs.\ auxiliary prompt space,
+    \item high-scoring attack pathways discovered by the model-informed attack,
+    \item block/timestep regions implicated by causal tracing.
+\end{itemize}
+These would make the method easier to explain and strengthen the conceptual story.
+
+\subsubsection{Recommended Paper Structure}
+\label{subsubsec:recommended_paper_structure}
+
+To avoid fragmentation, we recommend the following hierarchy:
+\begin{enumerate}
+    \item \textbf{Main contribution}: model-informed concept recovery attack.
+    \item \textbf{Prompt discovery modules}: coverage analysis + representation analysis.
+    \item \textbf{Mechanistic validation}: causal tracing on a smaller set of concepts or examples.
+    \item \textbf{Scientific takeaway}: robust unlearning often suppresses direct lexical access while leaving residual semantic pathways, and stronger robustness may come at the cost of collateral forgetting.
+\end{enumerate}
+
+Under this organization, the four pieces are not separate stories. Instead:
+\begin{itemize}
+    \item the \textbf{coverage side} proposes candidate attack regions,
+    \item the \textbf{representation side} ranks or filters those candidates using internal model signals,
+    \item the \textbf{causal side} validates which pathways genuinely matter,
+    \item and the \textbf{attack side} provides the main end-to-end result.
+\end{itemize}
+
+\subsection{Recommended Two-Month Execution Plan}
+\label{subsubsec:execution_plan}
+
+A practical schedule is as follows.
+
+\paragraph{Weeks 1--2.}
+Finalize the attack framing, define factor families, and implement candidate prompt extraction from:
+\begin{itemize}
+    \item the broader horse-associated prompt proxy;
+    \item the robust unlearning auxiliary prompt space.
+\end{itemize}
+
+\paragraph{Weeks 2--3.}
+Implement the representation-side scoring pipeline using selected internal signals from the robust unlearned model, focusing first on cross-attention and a small number of denoising timesteps.
+
+\paragraph{Weeks 3--4.}
+Build the model-informed attack using ranked cues and prompt composition, and compare against bag-of-words and generic search baselines.
+
+\paragraph{Weeks 4--5.}
+Run the main evaluation across multiple unlearning baselines, including the strongest robust method.
+
+\paragraph{Weeks 5--6.}
+Add neighbor preservation evaluation and quantify the robustness--specificity tradeoff.
+
+\paragraph{Weeks 6--7.}
+Implement a small-scale causal tracing or perturb-and-restore analysis on a few representative cases.
+
+\paragraph{Weeks 7--8.}
+Write the paper, prepare visualizations, and trim the method to the strongest coherent story.
+
+\subsection{Practical Recommendation}
+\label{subsubsec:practical_recommendation}
+
+If time becomes constrained, the priority order should be:
+\begin{equation*}
+\text{main attack} \;>\; \text{coverage analysis} + \text{representation scoring} \;>\; \text{causal tracing}.
+\end{equation*}
+That is, the submission can still be strong if causal tracing remains a smaller supporting analysis, but it will be weak if the attack itself is not convincingly stronger than manual or generic alternatives.

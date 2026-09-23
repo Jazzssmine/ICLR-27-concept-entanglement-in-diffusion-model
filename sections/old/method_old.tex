@@ -1,0 +1,156 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Problem Setup}
+\label{sec:setup}
+
+We consider a pretrained latent diffusion model parameterized by $\theta_0$.
+Given a latent image $x_0 \sim p_{\text{data}}$, a timestep $t \sim \mathcal{U}\{1,\dots,T\}$, and noise $\epsilon \sim \mathcal{N}(0,I)$, the forward process is
+\begin{equation}
+x_t = \alpha_t x_0 + \sigma_t \epsilon.
+\end{equation}
+The U-Net predicts noise conditioned on a text prompt $p$ through a CLIP text encoder $\tau(\cdot)$:
+\begin{equation}
+\hat{\epsilon}_{\theta}(x_t,t,p) \triangleq \epsilon_{\theta}(x_t,t,\tau(p)).
+\end{equation}
+
+Our goal is \emph{concept unlearning with probabilistic reassignment}.
+Given a target concept node $u$ (e.g., a style or object), we learn an edited model $\theta'$ such that prompts expressing $u$ no longer yield the original concept behavior; instead, $u$ is {reassigned} to a distribution over {anchor concepts}.
+
+\subsection{Concept Graph and Anchor Candidate Set}
+\label{sec:graph}
+
+Let $G=(V,E)$ be a concept graph (or hierarchy) whose nodes $v\in V$ are concepts (styles/objects). We assume a parent relation $\mathrm{par}(v)$ is available (hierarchy) or induced (e.g., clustering). Let $\mathrm{ch}(v)$ denote children, and $\mathrm{peer}(v)$ denote siblings (other children of $\mathrm{par}(v)$).
+We also allow an undirected similarity neighborhood $\mathcal{N}_1(v)$ (e.g., $k$NN based on CLIP text embeddings).
+
+\paragraph{Anchor restriction rule.}
+We define the {anchor candidate set} $\mathrm{A}(u)$ as follows.
+\begin{equation}
+\mathcal{A}(u) \triangleq \{\mathrm{par}(u)\}\ \cup\ \mathrm{peer}(u)\ \cup\ \mathcal{N}_1(u),
+\label{eq:anchor-set-leaf}
+\end{equation}
+when $u$ is a leaf node.
+When $u$ is {not} a leaf (i.e., $|\mathrm{ch}(u)|>0$), we restrict anchors to the parent/peers/1-hop neighbors of $u$ but {exclude 1-hop child nodes}:
+\begin{equation}
+\mathcal{A}(u) \triangleq \{\mathrm{par}(u)\}\ \cup\ \mathrm{peer}(u)\ \cup\big(\mathcal{N}_1(u)\setminus \mathrm{ch}(u)\big).
+\label{eq:anchor-set-nonleaf}
+\end{equation}
+This matches our objective: forgetting a parent should reassign the entire subtree away from its descendants.
+
+\subsection{Graph Encoder and Probabilistic Anchor Assignment}
+\label{sec:gcn}
+Each node $v$ is initialized with an embedding $h_v^{(0)}\in\mathbb{R}^{d_g}$ (e.g., CLIP text embedding of the concept name and templates). We apply an $L$-layer GCN:
+\begin{equation}
+H^{(\ell+1)} = \sigma\!\big(\tilde{D}^{-\frac12}\tilde{A}\tilde{D}^{-\frac12} H^{(\ell)} W^{(\ell)}\big),\quad \ell=0,\dots,L-1,
+\end{equation}
+where $\tilde{A}=A+I$ and $\tilde{D}_{ii}=\sum_j \tilde{A}_{ij}$. The final node embedding is $z_v\triangleq h_v^{(L)}$. \textcolor{blue}{weighted graph where weights come from CLIP score}
+
+Given a target node $u$, we compute a soft reassignment distribution over candidate anchors $a\in\mathcal{A}(u)$: \textcolor{include graph attention instead of GCN}
+\begin{equation}
+\pi_{u\rightarrow a} =
+\frac{\exp\big(\psi(z_u,z_a)\big)}
+{\sum_{a'\in\mathcal{A}(u)} \exp\big(\psi(z_u,z_{a'})\big)},
+\label{eq:pi}
+\end{equation}
+where $\psi$ can be bilinear $\psi(z_u,z_a)=z_u^\top W z_a$ or an MLP on $[z_u;z_a;z_u\odot z_a]$. 
+In practice, the similarity neighborhood $\mathcal{N}_1(v)$ is defined
+via $k$-nearest neighbors in the embedding space $\{z_v\}$, which enables
+cross-branch reassignment even when the explicit graph contains only
+parent--child edges and superclass nodes lack training data.
+
+\paragraph{Entropy regularization (optional).}
+To avoid collapsing to a single anchor, we can encourage non-degenerate distributions via
+\begin{equation}
+\mathcal{R}_{\mathrm{ent}}(u) = -\sum_{a\in\mathcal{A}(u)} \pi_{u\rightarrow a}\log \pi_{u\rightarrow a}.
+\label{eq:entropy}
+\end{equation}
+
+\subsection{Mixture-Teacher Distillation for Reassignment}
+\label{sec:dirA}
+
+We learn edited parameters $\theta'$ (e.g., LoRA adapters inserted into selected U-Net layers) such that prompts expressing $u$ imitate a {mixture teacher} formed from anchor concepts.
+
+\paragraph{Prompt sets.}
+Let $\mathcal{P}_v$ denote prompts expressing concept $v$ (style or object).
+Let $\tilde{p}_a \sim \mathcal{P}_a$ be an anchor prompt sampled for anchor $a$.
+
+\paragraph{Mixture teacher.}
+We define a \emph{mixture} of original-model predictions:
+\begin{equation}
+\epsilon_{\mathrm{mix}}(x_t,t;u) \triangleq
+\sum_{a\in\mathcal{A}(u)} \pi_{u\rightarrow a}\,
+\epsilon_{\theta_0}\big(x_t,t,\tau(\tilde{p}_a)\big).
+\label{eq:eps-mix}
+\end{equation}
+
+\paragraph{Reassignment loss.}
+For $p\sim\mathcal{P}_u$, we train $\theta'$ so that the edited model matches the mixture teacher:
+\begin{equation}
+\mathcal{L}_{\mathrm{forget}}(u) =
+\mathbb{E}_{x_0,t,\epsilon}\ \mathbb{E}_{p\sim\mathcal{P}_u}
+\Big[
+\big\|
+\epsilon_{\theta'}(x_t,t,\tau(p)) - \epsilon_{\mathrm{mix}}(x_t,t;u)
+\big\|_2^2
+\Big].
+\label{eq:forget-loss-A}
+\end{equation}
+
+\paragraph{Retain loss.}
+To preserve general generation, we distill $\theta'$ to $\theta_0$ on a retain prompt set $\mathcal{P}_{\mathrm{ret}}$:
+\begin{equation}
+\mathcal{L}_{\mathrm{ret}} =
+\mathbb{E}_{x_0,t,\epsilon}\ \mathbb{E}_{p\sim\mathcal{P}_{\mathrm{ret}}}
+\Big[
+\big\|
+\epsilon_{\theta'}(x_t,t,\tau(p)) - \epsilon_{\theta_0}(x_t,t,\tau(p))
+\big\|_2^2
+\Big].
+\label{eq:retain-loss}
+\end{equation}
+
+\paragraph{Parent forgetting.}
+When forgetting a non-leaf node $u$, we apply reassignment to its subtree $S(u)$ (including $u$ and all descendants):
+\begin{equation}
+\mathcal{L}_{\mathrm{forget}}(S(u)) \triangleq \sum_{v\in S(u)} \mathcal{L}_{\mathrm{forget}}(v),
+\label{eq:forget-subtree}
+\end{equation}
+with $\mathcal{A}(u)$ defined by Eq.~\eqref{eq:anchor-set-nonleaf}.
+
+\begin{comment}
+\subsection{Topological Gradient Masking}
+\label{sec:masking}
+
+Optimizing $\mathcal{L}_{\mathrm{ret}}$ directly creates a conflict: $\mathcal{L}_{\mathrm{forget}}$ encourages $\theta'$ to mimic the anchors, which may necessitate overwriting parameters that are critical for the anchors themselves. This leads to {feature collapse} where the anchors degrade.
+To resolve this, we introduce a {Topological Gradient Mask} $M$ derived from the structural importance of the anchor set $\mathcal{A}(u)$.
+
+\paragraph{Anchor Saliency.}
+For each anchor $a \in \mathcal{A}(u)$, we compute the gradient sensitivity of the model parameters with respect to the retain loss on that anchor. The saliency of the $j$-th parameter $\theta^{(j)}$ is:
+\begin{equation}
+g_a^{(j)} = \left| \nabla_{\theta^{(j)}} \mathbb{E}_{p \sim \mathcal{P}_a} \left[ \|\epsilon_{\theta_0}(x_t, t, \tau(p)) - \epsilon_{\text{noise}}\|^2 \right] \right|.
+\end{equation}
+We aggregate these sensitivities across the probabilistic anchor set using element-wise maximization to ensure the union of critical features is protected:
+\begin{equation}
+S_{\text{agg}}^{(j)} = \max_{a \in \mathcal{A}(u)} \left( g_a^{(j)} \right).
+\end{equation}
+
+\paragraph{Mask Construction.}
+We define the mask $M \in [0, 1]^{|\theta'|}$ by inverting the aggregate saliency, effectively freezing parameters that are load-bearing for the anchor neighborhood:
+\begin{equation}
+M^{(j)} = 1 - \sigma\left(\frac{S_{\text{agg}}^{(j)} - \mu}{\delta}\right),
+\label{eq:mask}
+\end{equation}
+where $\sigma$ is the sigmoid function, and $\mu, \delta$ are hyperparameters controlling sparsity.
+
+\subsection{Constrained Optimization}
+\label{sec:optim}
+Finally, we formulate the update rule such that the reassignment loss $\mathcal{L}_{\mathrm{forget}}$ is strictly constrained by the mask, while the global retain loss $\mathcal{L}_{\mathrm{ret}}$ acts as a regularizer.
+
+The total gradient applied to update $\theta'$ is:
+\begin{equation}
+\nabla_{\theta'} \mathcal{L}_{\text{total}} = M \odot \nabla_{\theta'} \mathcal{L}_{\mathrm{forget}}(\cdot) + \lambda \nabla_{\theta'} \mathcal{L}_{\mathrm{ret}} + \gamma \nabla_{\theta'} \|\theta'-\theta_0\|_2^2.
+\label{eq:final-update}
+\end{equation}
+
+By applying $M \odot \nabla \mathcal{L}_{\mathrm{forget}}$, we ensure that the unlearning process is \emph{orthogonal} to the structural integrity of the anchor concepts, permitting edits only in the parameter subspace that does not degrade the hierarchy.
+\end{comment}

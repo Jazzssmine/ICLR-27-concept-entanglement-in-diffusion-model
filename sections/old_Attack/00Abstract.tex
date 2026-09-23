@@ -1,0 +1,43 @@
+% \begin{abstract}
+% Text-to-image diffusion models have demonstrated remarkable generative capabilities, yet the internal organization of their conceptual knowledge remains a "black box." Recently, Machine Unlearning (MU) has emerged as a practical tool for removing undesirable concepts for safety and copyright reasons. However, current unlearning research overwhelmingly focuses on the complete erasure of isolated concepts, largely ignoring the rich, relational structure that connects them. This presents a critical gap: unlearning one concept may have unpredicted side effects on semantically related "neighbor" or "parent" concepts, and these effects are poorly understood.
+
+% This work reframes machine unlearning as a powerful scientific probe for mechanistic interpretability. We move beyond treating unlearning as a simple deletion tool and instead use it to investigate a core hypothesis: that abstract knowledge, encompassing both artistic styles and object categories, is organized in a directional, hierarchical graph within the model's latent space. We hypothesize that unlearning a specific "child" concept will cause the model's generative process, when prompted for the erased style, to revert to a semantically related "parent" concept.
+
+% To test this, we first construct and release two knowledge graphs: one for the 60 artistic styles within the \textsc{UnlearnCanvas} benchmark dataset~\cite{zhang2024unlearncanvas}, and a second for ImageNet~\cite{deng2009imagenet} classes, derived from WordNet~\cite{fellbaum1998wordnet} hierarchies. Using targeted unlearning interventions guided by these graphs, we provide empirical evidence for the directional, hierarchical knowledge structure across diverse conceptual types in diffusion models. Based on these findings, we propose a new, hierarchy-aware unlearning method designed to precisely remove entire conceptual branches. This approach offers a more robust and interpretable solution for concept unlearning, enhancing safety, preventing bypass attacks, and furthering our understanding of generative AI's knowledge representation.
+
+% \end{abstract}
+
+% \begin{abstract}
+% % \varun{missing + title is not very informative?}
+% Concept unlearning in text-to-image diffusion models aims to remove a target concept while preserving the model’s ability to generate unrelated content. 
+% Existing methods are typically evaluated using two metrics—unlearning accuracy and retain accuracy—implicitly assuming that these objectives can be optimized independently. 
+
+% In this work, we show that this assumption breaks down due to \emph{concept entanglement} in diffusion models. 
+% We first provide empirical evidence that visual concepts are not represented as isolated, token-aligned features, but instead emerge from distributed co-occurrence patterns across correlated tokens. 
+% As a result, unlearned concepts can be regenerated through contextual prompts that omit the target token (concept leakage), while aggressive suppression of a concept degrades the generation of semantically related concepts (collateral forgetting).
+
+% We formalize this phenomenon by defining concept activation regions and their semantic overlap, and prove that any method achieving $\epsilon$-robust erasure of a target concept must incur a non-zero error in preserving neighboring concepts. 
+% This establishes a fundamental trade-off between robustness and retention, showing that perfect unlearning and perfect preservation cannot be simultaneously achieved.
+
+% Finally, we empirically evaluate seven unlearning methods
+% %\ali{it seems you included several more?} 
+% and observe a clear Pareto frontier between erasure strength and neighbor preservation, consistent with our theoretical predictions. 
+% Our results suggest that the limitations of current unlearning methods arise from the intrinsic structure of concept representations, rather than shortcomings of specific algorithms.
+
+% \end{abstract}
+
+
+\begin{abstract}
+
+Text-to-image diffusion models are increasingly subject to \emph{machine unlearning} requirements due to copyright, privacy, safety, and regulatory concerns. Existing diffusion unlearning methods primarily focus on suppressing generation when a target concept is explicitly referenced in the prompt, implicitly assuming that visual concepts are compositionally and disentangledly represented within the model’s joint text--image space. However, empirical evidence from vision--language models suggests that text encoders often exhibit bag-of-words behavior, where semantic concepts emerge from distributed co-occurrence patterns rather than isolated tokens.
+
+In this work, we identify and formalize a previously underexplored adversarial vulnerability in diffusion unlearning, which we term \emph{contextual concept leakage}. We show that removing a concept token (e.g., ``horse'') does not guarantee elimination of the underlying visual concept. Instead, an adversary can construct prompts that exclude the target token but include correlated context words (e.g., ``person riding near a stable''), causing the unlearned model to continue generating the prohibited concept.
+
+We provide a mathematical formulation of this threat model under non-compositional text representations and demonstrate that standard token-level unlearning objectives are insufficient to guarantee concept-level forgetting. Our analysis highlights a fundamental limitation of current diffusion unlearning approaches and underscores the need for concept-level guarantees that are robust to contextual prompt manipulation.
+
+\end{abstract}
+
+
+Concept unlearning in text-to-image diffusion models aims to remove a target concept, e.g., the object \texttt{horse}, while preserving the model's ability to generate semantically related but distinct content, such as other animals like \texttt{donkey} and \texttt{zebra}. Unlike classical machine unlearning, where the forget and retain sets are typically disjoint, concept unlearning operates on a representation where related concepts share substantial structure: we show that semantically related concepts share overlapping activation regions in diffusion models, so the assumption that erasure and neighbor retention can be optimized independently is fundamentally violated. This entanglement produces two coupled failure modes: \emph{concept leakage}, where an erased concept resurfaces from prompts that omit its name but supply correlated context (e.g., generating a horse from ``a jockey at the racetrack''), and \emph{collateral forgetting}, where pushing erasure harder degrades neighboring concepts the user wanted to keep.
+
+We formalize this coupling and prove that no unlearning method can simultaneously achieve perfect erasure (suppressing the target on \emph{all} prompts) and perfect preservation of its semantic neighbors, with the unavoidable tradeoff scaling linearly with the degree of representational overlap between the target and its neighbors. We empirically verify this trade-off on seven unlearning methods. Adversarially robust methods (STEREO, AdvUnlearn) drive indirect recovery on \texttt{horse} to 0\% but collapse neighbor preservation from 100 to 14.7 and 39.8, while sparse inference-time methods (SAeUron, SEOT) retain neighbors above $82$ but leave indirect-recovery rates above $23$\%. As predicted, the tradeoff is steep for highly entangled concepts (\texttt{horse}, \texttt{cat}, \texttt{dog}, \texttt{bear}) and much milder for the more isolated concept \texttt{castle}. Together these results suggest that current methods' limitations reflect the intrinsic structure of concept representations, not algorithmic shortcomings.

@@ -1,0 +1,45 @@
+\section{Implementation Details}
+\label{app:implementation}
+Here we introduce the implementation of each unlearning method used in~\cref{sec:experiment}, including hyperparameters, training protocols, and compute budgets. All methods are applied to CompVis Stable Diffusion v1.4~\citep{rombach2022high}. The full implementation, including code, prompt CSVs, and evaluation scripts, is available at our anonymous repository:
+\url{https://anonymous.4open.science/r/concept-entangle-0A9C}
+
+\subsection{Method-Specific Hyperparameters}
+We group the seven benchmarked methods into two mechanism 
+families. \emph{Fine-tuning methods} (ESD, SalUn, EDiff, 
+AdvUnlearn, STEREO) modify model weights through gradient 
+updates on an unlearning objective. \emph{Inference-time methods} (SEOT, SAeUron) intervene on activations or embeddings during generation without modifying base weights. AdvUnlearn and STEREO additionally incorporate adversarial training, explicitly targeting the aggressive-erasure end of the trade-off; their inclusion tests whether robustness gains incur measurable cost to neighbor preservation.
+
+Unless otherwise noted, we use the hyperparameters specified in each method's original publication. Deviations from the published configurations, and all choices not fully specified by the original 
+papers, are documented per-method below.
+\paragraph{ESD~\citep{gandikota2023erasing}.} 
+Erased Stable Diffusion fine-tunes the cross-attention 
+layers to suppress the target concept via a negative-guidance objective. We use the ESD-sd (stable-diffusion) variant. 
+Configuration: learning rate \textbf{5e-5}, training steps \textbf{200}, negative guidance scale $\eta = \textbf{5}$, 
+batch size \textbf{1}. Training uses the target concept name as the single forget prompt.
+
+\paragraph{SalUn~\citep{fan2023salun}.} 
+Saliency-guided Unlearning identifies salient weights via gradient magnitudes and applies random labeling on the forget set to those weights only. We use saliency threshold sparsity \textbf{0.5}, forget-set size \textbf{800}, learning rate \textbf{1e-5}, and training epochs \textbf{5}. The retain set is drawn from \textbf{800}.
+\paragraph{EDiff~\citep{wu2024erasediff}.} 
+EraseDiff fine-tunes the UNet using a bi-level optimization that explicitly balances erasure and retention objectives. Configuration: learning rate \textbf{1e-5}, inner steps per outer update \textbf{2}, total outer iterations \textbf{300}.
+\paragraph{AdvUnlearn~\citep{zhang2024defensive}.} 
+Adversarial Unlearning augments the erasure objective with adversarial prompt generation to improve robustness against indirect concept recovery. We use adversarial prompt budget 30 per training step, adversarial learning rate \textbf{1e-3}, main-model learning rate \textbf{1e-5}, and training steps \textbf{1000}. The attack prompts are updated per training steps.
+\paragraph{STEREO~\citep{srivatsan2025stereo}.} 
+STEREO proceeds in two phases: a Search for Trainable Embeddings via RObust optimization (STE) phase that learns adversarial token embeddings $v_1^*, v_2^*$, followed by a Robust Erasure via Orthogonalization (REO) phase that suppresses the subspace spanned by these embeddings. STE phase: \textbf{200} steps, learning rate 
+\textbf{5e-6}. REO phase: \textbf{200} steps, learning rate \textbf{2e-5}, $K = \textbf{2}$ adversarial embeddings per target.
+\paragraph{SEOT~\citep{li2024get}.} 
+Soft Embedding Optimization for Target-concept erasure modifies the text embedding at inference time to suppress the target concept without altering model weights. We use embedding regularization strength \textbf{0.01} and optimization steps per generation \textbf{10}.
+\paragraph{SAeUron~\citep{cywinski2025saeuron}.} 
+SAeUron uses sparse autoencoder feature ablation applied at inference: for each target, $\tau_c$ concept-specific SAE features are identified from activation statistics, and these features are zeroed during generation. We use the pre-trained SAE released by the authors, with 
+$\tau_c = \textbf{1}$ features ablated per target. 
+
+
+\subsection{Compute and Infrastructure}
+\label{app:compute}
+All experiments were run on GPU A100 40GB. Unlearning per method-target pair requires approximately 1 GPU-hours for fine-tuning methods and 2 GPU-hours for inference-time methods. Evaluation (image generation + classification) requires approximately 0.5 GPU-hours per method-target pair.
+
+\subsection{Reproducibility}
+For each (method, target) pair, we generate 200 images per prompt category (direct, indirect, neighbor, control) using fixed random seeds, with seed equal to the row index in the target's prompt CSV. This ensures seed-level variation is controlled when comparing methods on the same prompt.
+The base model $\mathcal{D}_\theta$ is loaded from the HuggingFace checkpoint \texttt{CompVis/stable-diffusion-v1-4}. Code, prompt CSVs, and the classification vocabulary (\cref{tab:vocab}) will be released to enable full reproduction of~\cref{tab:main_results_avg}.
+
+\paragraph{Use of existing assets.}
+Our experiments use publicly released assets from prior work: the CompVis Stable Diffusion v1.4 checkpoint, released under the CreativeML OpenRAIL-M license; LAION metadata/captions, released under CC-BY 4.0 while the underlying images remain subject to their original copyrights; and the released SAeUron sparse-autoencoder features, released under Apache-2.0. We cite the original sources for these assets and use them only for research evaluation under their stated release terms and licenses.

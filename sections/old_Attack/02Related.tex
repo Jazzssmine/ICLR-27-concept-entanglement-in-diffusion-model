@@ -1,0 +1,79 @@
+\section{Related Works}
+This section introduces the background on text-to-image diffusion models and reviews existing approaches for concept unlearning in diffusion models.
+\subsection{Background \& Notation}
+\textbf{Text-to-image latent diffusion models.}
+We consider a text-to-image latent diffusion model (LDM), following Stable Diffusion~\citep{rombach2022high}. 
+An input image $x \in \mathcal{X}$ is first mapped by a pretrained variational autoencoder encoder $E$ into a latent representation $z = E(x) \in \mathcal{Z}$, and reconstructed by a decoder $D : \mathcal{Z} \rightarrow \mathcal{X}$. 
+Instead of modeling pixels directly, the diffusion model operates in latent space, which substantially reduces computation while preserving semantic content.
+
+Given a latent $z$, the forward diffusion process corrupts it with Gaussian noise to obtain $z_t$ at timestep $t \in \{1,\dots,T\}$. 
+A time-conditioned U-Net $\epsilon_\theta$ is then trained to predict the noise added to $z_t$. 
+In text-conditioned generation, a prompt $p \in \mathcal{P}$ is encoded by a text encoder $f_{\psi}$ into text features $e_p = f_{\psi}(p)$, and these features condition the U-Net through cross-attention layers. 
+The standard latent diffusion objective is
+\begin{equation}
+\mathcal{L}_{\mathrm{LDM}}
+=
+\mathbb{E}_{x,\epsilon,t}
+\left[
+\left\|
+\epsilon - \epsilon_\theta(z_t, t, e_p)
+\right\|_2^2
+\right],
+\end{equation}
+where $\epsilon \sim \mathcal{N}(0,I)$ and $z_t$ is the noisy latent corresponding to $z = E(x)$.
+At inference time, generation starts from Gaussian noise and iteratively denoises toward a clean latent, which is finally decoded into an image.
+
+\textbf{Contrast with vision-language models.}
+Although diffusion models use text encoders similar to those used in vision-language models (VLMs)~\citep{radford2021learning}, their training objectives differ fundamentally.
+VLMs such as CLIP are typically trained on large collections of image--text pairs using contrastive objectives that align image and text embeddings by pulling matched pairs together and pushing mismatched pairs apart~\citep{radford2021learning,zhang2024vision}. 
+Thus, VLM training primarily learns \emph{cross-modal alignment} in a shared representation space.
+In contrast, diffusion models use text embeddings as conditioning signals for a denoising generator: the text encoder does not directly predict image-text similarity, but instead provides token-level features that guide image synthesis through cross-attention.
+This distinction matters for unlearning: removing a concept from a generative diffusion model requires changing how text-conditioned denoising gives rise to visual content, not merely altering a retrieval-style similarity score.
+
+\textbf{Diffusion unlearning.}
+Let $\mathcal{D}_\theta$ denote a pretrained text-to-image diffusion model with parameters $\theta$, and let $c$ denote a target concept to be erased (e.g., \texttt{horse}).
+Diffusion unlearning seeks to produce an updated model $\mathcal{D}_{\theta'}$ such that prompts referring to $c$ no longer generate images containing that concept, while the model retains its ability to generate unrelated content.
+Formally, given a prompt distribution $\mathcal{P}_c$ associated with concept $c$, the goal is to reduce the probability that samples from $\mathcal{D}_{\theta'}(\cdot \mid p)$ contain $c$ for $p \sim \mathcal{P}_c$, while preserving generation quality and fidelity on prompts outside this target concept class.
+
+\subsection{Unlearning Methods}
+\ali{I think this section can go to appendix under experimental setup and only a summary remains for related work.}
+Machine unlearning in diffusion models aims to remove a target concept from a trained model while preserving its overall generative capabilities. Existing approaches generally assume that visual concepts can be removed by modifying the model’s parameters or intermediate representations such that prompts referencing the concept no longer produce corresponding images.
+
+\textbf{Fine-tuning methods.}
+A large body of work attempts to erase concepts by directly modifying the weights of a pretrained diffusion model. 
+Early methods such as Erased Stable Diffusion (ESD)~\cite{gandikota2023erasing} retrain the model with negative guidance so that prompts containing the target token produce outputs aligned with a neutral anchor prompt. 
+Subsequent work improves the precision of this approach by editing specific components of the model. 
+For example, attention-based methods modify cross-attention representations associated with the concept tokens~\cite{wang2025ace}, while other methods identify and update only the most sensitive parameters related to the concept~\cite{fan2023salun,wu2024scissorhands}. 
+More recent approaches focus on improving robustness. 
+AdvUnlearn~\cite{zhang2024defensive} incorporates adversarial training to defend against prompt-based regeneration attacks, while STEREO~\cite{srivatsan2025stereo} enforces separation between target and neighboring concepts to reduce unintended concept recovery.
+
+\textbf{Inference-time methods.}
+A complementary line of work avoids modifying model weights and instead intervenes during generation. 
+These approaches suppress unwanted concepts by manipulating text embeddings~\cite{li2024get}, inserting lightweight adapters that block concept-specific information flow~\cite{lyu2024one}, or identifying and ablating concept-related features discovered by sparse autoencoders~\cite{cywinski2025saeuron}. 
+While computationally efficient, these methods similarly treat concepts as localized entities that can be suppressed independently.
+
+Overall, existing unlearning algorithms operate under the assumption that concepts can be selectively removed from the model’s representation space. In the following section, we provide empirical evidence that challenges this assumption by demonstrating that concepts remain recoverable through correlated contextual prompts.
+% \noindent \textbf{Data Unlearning}
+% \cite{alberti2025data}
+
+\begin{comment}
+    \subsection{Unlearning Methods}
+% \noindent \textbf{The \textsc{UnlearnCanvas} Benchmark}
+% Our experimental framework is built upon the \textsc{UnlearnCanvas} benchmark, a comprehensive dataset recently proposed by~\citet{zhang2024unlearncanvas} to standardize the evaluation of diffusion model unlearning. It was created to address the lack of rigorous, automated evaluation frameworks, which previously relied on ad-hoc, qualitative assessments. The benchmark consists of a high-resolution, stylized image dataset featuring 60 distinct artistic styles and 20 distinct object classes. Its primary advantage lies in its high stylistic consistency, which enables the training of a highly accurate style classifier, allowing for the reliable, quantitative measurement of unlearning using standardized metrics like Unlearning Accuracy (UA), In-domain Retain Accuracy (IRA), and Cross-domain Retain Accuracy (CRA). While \textsc{UnlearnCanvas} provides the essential visual data for our investigation, it does not include a formal, art style hierarchy linking its 60 styles. The styles are presented as a flat list. A foundational part of our methodology, therefore, is to construct this missing knowledge graph, which serves as the basis for our directional unlearning experiments.
+
+\noindent \textbf{Methods for Diffusion Model Unlearning}
+The primary objective of Machine Unlearning (MU) in diffusion models is to erase a target concept while minimizing collateral damage to the model's remaining generative capabilities. Current approaches can be broadly classified into two main categories:
+
+\textbf{1. Fine-Tuning Methods:} This line of work involves permanently altering the model's weights. Many of these methods, such as Erased Stable Diffusion (ESD)~\cite{gandikota2023erasing}, utilize a form of negative guidance, retraining the model to align the output of the "forget" prompt with that of a neutral anchor prompt. Variations of this approach aim for greater precision. 
+For example,~\citet{zhang2024forget} applies a re-steering loss to attention layers, while~\citet{fan2023salun} and~\citet{wu2024scissorhands} identify and modify only the most sensitive weights. 
+\cite{zhang2024defensive} propose \textit{AdvUnlearn}, which integrates adversarial training into diffusion model unlearning to improve robustness against prompt-based attacks that attempt to regenerate erased concepts.
+Attention-based Concept Erasure (ACE)~\cite{wang2025ace} removes target concepts by modifying cross-attention representations associated with the concept tokens, enabling localized editing of concept-related activations within the diffusion model.
+STEREO~\cite{srivatsan2025stereo} introduces a robust concept unlearning framework that enforces separation between target and neighboring concepts, improving resistance to prompt-based regeneration of erased concepts.
+%More recently,~\citet{li2025set} proposes a trajectory-aware finetuning framework that explicitly preserves early-stage denoising dynamics while reversing classifier-free guidance directions during mid-to-late stages, enabling precise concept erasure without relying on heuristic anchor selection.
+
+Other notable fine-tuning methods include Unified Concept Editing (UCE)~\cite{gandikota2024unified}, Concept Ablation~\cite{vinker2023concept}, Selective Amnesia (SA)~\cite{heng2023selective}, and EraseDiff (EDiff)~\cite{wu2024erasediff}. 
+
+While effective, these methods are vulnerable to "jailbreak" attacks that exploit related concepts~\cite{zhang2024generate} and operationally treat concepts as isolated entities. Orthogonal to concept-level unlearning,~\citet{alberti2025data} formalize datapoint-level unlearning in diffusion models and introduce Subtracted Importance Sampled Scores (SISS), an efficient fine-tuning objective with theoretical guarantees that aims to match the retrain-without-data gold standard at far lower cost~\cite{alberti2025data}
+
+\textbf{2. Inference-Time Methods:} A second class of methods avoids the costly fine-tuning step by intervening directly during the generation process, leaving the model's original weights untouched. These techniques are often more efficient and can be dynamically toggled. SEOT~\cite{li2024get}suppresses unwanted content by manipulating text embeddings, and SPM~\cite{lyu2024one} uses lightweight one-dimensional adapters to block the propagation of concept-specific information. A highly relevant new approach in this category is SAeUron~\cite{cywinski2025saeuron}. This method leverages Sparse Autoencoders (SAEs) trained on the model's internal activations to learn a dictionary of sparse, interpretable features.And unlearning is achieved at inference time by identifying the features that correspond to an unwanted concept and ablating them, preventing their contribution to the final image. While these methods also treat concepts in isolation, their interventional nature inspires our work. We leverage similar interventions not just for deletion, but as a method to discover the latent structure of conceptual relationships. 
+\end{comment}

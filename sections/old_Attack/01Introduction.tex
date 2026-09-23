@@ -1,0 +1,29 @@
+\section{Introduction}
+\label{sec:intro}
+
+Text-to-image diffusion models have achieved remarkable progress in generating high-quality images conditioned on natural language prompts. As these models are increasingly deployed in real-world applications, \emph{machine unlearning} has emerged as a critical requirement, driven by concerns around copyright, privacy, safety, and regulatory compliance. Given a trained generative model and a target concept deemed undesirable (e.g., an object, style, or entity), unlearning methods aim to remove the model’s ability to generate that concept while preserving overall generative utility.
+
+Recent work on diffusion unlearning typically focuses on suppressing generation when the target concept is explicitly referenced in the text prompt. However, these approaches implicitly assume that concepts are represented in a compositional and disentangled manner within the model’s joint text--image representation space. Under this assumption, removing the contribution of a concept token (e.g., \emph{``horse''}) should suffice to eliminate the corresponding visual concept from generated images.
+
+This assumption is increasingly at odds with empirical evidence from vision--language modeling. Prior work has shown that state-of-the-art vision--language models (VLMs), including those commonly used as text encoders in diffusion pipelines, often behave like \emph{bags of words}, exhibiting weak sensitivity to object--relation bindings, attribute associations, and word order~\cite{yuksekgonul2022and}. In such models, visual concepts are not represented as isolated semantic entities, but instead emerge from co-occurrence statistics over sets of correlated tokens.
+
+%@yian (from varun): what sections are relevant to read? also, why is there no chat on your overleaf?
+
+In this paper, we argue that this bag-of-words behavior induces a previously underexplored \emph{adversarial vulnerability} in diffusion unlearning. Specifically, we show that unlearning a concept token does not guarantee the removal of the underlying visual concept. An adversary may construct prompts that exclude the target token but include correlated context words (e.g., \emph{``person riding in a stable''}), causing the unlearned model to still generate images containing the prohibited concept.
+
+We formalize this phenomenon as \emph{contextual concept leakage}: a failure mode in which unlearned concepts persist through correlated prompt contexts rather than explicit mentions. We provide a mathematical formulation of this threat model and show that existing unlearning objectives are insufficient under non-compositional representations. Our analysis highlights the need for concept-level, rather than token-level, guarantees in generative unlearning.
+
+\yian{Maybe frame it as: The vulnerability arises because unlearning suppresses a lexical trigger more than the underlying semantic region, enabling optimization-based attacks to route through correlated concepts and compositional cues. We study whether concept unlearning removes a concept itself or only blocks direct lexical access to it. We formulate indirect concept recovery as an optimization problem over natural prompts and show that automated attacks can recover erased concepts without explicit mentions.}
+
+
+
+\varun{proposed re-org: 1. introduction; 2. background (on training diffusion models; contrast with VLMs) + related work (which would require you to show that there are existing unlearning algorithms that claim to delete/erase concepts) + notation (which would probably be the first thing you explain); 3. motivational experiment (which highlights how concepts are entangled in captions and how diffusion models behave the same as VLMs); 4. problem formulation + threat model (short + half-page); 5. approach; 6. implementation and results; 7. discussion; 8. conclusion}
+
+
+\varun{i would also assume that you plan to submit to neurips and consequently this template is not accurate?}
+
+
+
+
+
+

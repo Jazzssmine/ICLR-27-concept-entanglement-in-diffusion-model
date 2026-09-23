@@ -1,0 +1,281 @@
+\section{The Robustness--Specificity Tradeoff: Formal Analysis}
+
+\subsection{Definitions}
+
+Let $f_\phi$ be a pretrained text-to-image diffusion model and let
+$\tilde{f}_\phi$ denote a concept-erased model (CEM) obtained by some
+unlearning procedure applied to $f_\phi$. We work with the UNet noise
+predictor $\epsilon_\theta$ and its associated text encoder
+$\mathcal{Y}_\psi : \mathcal{T} \to \mathcal{P}$, where $\mathcal{T}$
+is the text space and $\mathcal{P} \subseteq \mathbb{R}^d$ is the text
+embedding space.
+
+\begin{definition}[Concept activation region]
+Let $\ell^*$ denote a fixed layer of the UNet (in our experiments,
+\texttt{up\_blocks.1.attentions.1}) and let $t^* \in \{1,\ldots,T\}$
+denote a representative denoising timestep. Define the
+\emph{concept activation function}
+\[
+    \Phi_\theta : \mathcal{T} \longrightarrow \mathcal{Z}, \qquad
+    \Phi_\theta(p) \;=\; \mathrm{A}_\theta(p,\, \ell^*,\, t^*),
+\]
+where $\mathrm{A}_\theta(p,\ell,t)$ denotes the cross-attention output
+at layer $\ell$ and timestep $t$ under model $\theta$. The
+\emph{activation region} of concept $c$ is
+\[
+    \mathcal{R}_c \;=\; \bigl\{\, \Phi_{\theta^*}(p) \;\big|\;
+    p \in \mathcal{T},\; \mathbb{O}_\mathcal{X}(f_\phi(p), c) = 1
+    \,\bigr\} \;\subseteq\; \mathcal{Z},
+\]
+where $\mathbb{O}_\mathcal{X} : \mathcal{X} \times \mathcal{C}
+\to \{0,1\}$ is the ground-truth oracle that returns $1$ if concept
+$c$ appears in image $x$.
+\end{definition}
+
+\begin{definition}[Semantic neighborhood]
+The \emph{semantic neighborhood} of concept $c$ at radius $\delta > 0$
+is
+\[
+    \mathcal{N}_\delta(c) \;=\; \bigl\{\, c' \in \mathcal{C}
+    \;\big|\; c' \neq c, \;
+    d_\mathcal{Z}\!\left(\mathcal{R}_c,\, \mathcal{R}_{c'}\right)
+    < \delta \,\bigr\},
+\]
+where $d_\mathcal{Z}(A,B) = \inf_{a \in A, b \in B}\|a - b\|_2$
+denotes the set distance in $\mathcal{Z}$.
+\end{definition}
+
+\begin{definition}[$\varepsilon$-robust unlearning]
+\label{def:robust}
+A CEM $\tilde{f}_\phi$ with unlearned parameters $\hat\theta$ achieves
+\emph{$\varepsilon$-robust unlearning} of concept $c_u$ if, for all
+prompts $p \in \mathcal{T}$ (including those that do not mention $c_u$
+explicitly),
+\[
+    \Pr_{x \sim p_{\hat\theta}(\cdot \mid p)}\!\bigl[
+    \mathbb{O}_\mathcal{X}(x, c_u) = 1\bigr] \;<\; \varepsilon.
+\]
+\end{definition}
+
+\begin{definition}[$\gamma$-neighbor preservation]
+\label{def:neighbor}
+A CEM $\tilde{f}_\phi$ achieves \emph{$\gamma$-neighbor preservation}
+with respect to $\mathcal{N}_\delta(c_u)$ if, for all
+$c' \in \mathcal{N}_\delta(c_u)$,
+\[
+    \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta^*}(p_{c'})
+    \bigr\|_2 \;<\; \gamma,
+\]
+where $p_{c'}$ is a canonical prompt for concept $c'$.
+\end{definition}
+
+\begin{definition}[Concept overlap]
+The \emph{overlap coefficient} between concept $c_u$ and its
+neighborhood $\mathcal{N}_\delta(c_u)$ is
+\[
+    \kappa(c_u, \delta) \;=\;
+    \frac{
+        \mathrm{vol}\!\left(
+            \mathcal{R}_{c_u}^{(\rho)} \cap
+            \bigcup_{c' \in \mathcal{N}_\delta(c_u)}
+            \mathcal{R}_{c'}^{(\rho)}
+        \right)
+    }{
+        \mathrm{vol}\!\left(\mathcal{R}_{c_u}^{(\rho)}\right)
+    },
+\]
+where $\mathcal{R}_c^{(\rho)} = \{z \in \mathcal{Z} \mid
+\inf_{r \in \mathcal{R}_c}\|z - r\|_2 \leq \rho\}$ denotes the
+$\rho$-fattening of $\mathcal{R}_c$ for some margin $\rho > 0$.
+\end{definition}
+
+\subsection{Main Result}
+
+\begin{assumption}[Lipschitz continuity of generation]
+\label{asm:lip}
+The mapping from activation space to concept generation probability
+is $L$-Lipschitz: for all $z, z' \in \mathcal{Z}$,
+\[
+    \bigl|\Pr[\mathbb{O}_\mathcal{X}(f_\phi(z),c)=1]
+    - \Pr[\mathbb{O}_\mathcal{X}(f_\phi(z'),c)=1]\bigr|
+    \;\leq\; L\|z - z'\|_2.
+\]
+\end{assumption}
+
+\begin{assumption}[Activation-editing constraint]
+\label{asm:edit}
+Any unlearning edit $\theta^* \mapsto \hat\theta$ that suppresses
+$\mathcal{R}_{c_u}$ must displace activations by at least
+$\Delta > 0$ within $\mathcal{R}_{c_u}$:
+\[
+    \forall\, p \;\text{s.t.}\;
+    \Phi_{\theta^*}(p) \in \mathcal{R}_{c_u}:
+    \quad
+    \bigl\|\Phi_{\hat\theta}(p) - \Phi_{\theta^*}(p)\bigr\|_2
+    \;\geq\; \Delta,
+\]
+where $\Delta \geq (1 - \varepsilon)/L$ is the minimum displacement
+required to push generation probability below $\varepsilon$.
+\end{assumption}
+
+\begin{theorem}[Robustness--Specificity Tradeoff]
+\label{thm:tradeoff}
+Let Assumptions~\ref{asm:lip} and~\ref{asm:edit} hold. Suppose
+$\tilde{f}_\phi$ achieves $\varepsilon$-robust unlearning of $c_u$
+(Definition~\ref{def:robust}). Then for any neighbor concept
+$c' \in \mathcal{N}_\delta(c_u)$ whose activation region satisfies
+$\mathcal{R}_{c'}^{(\rho)} \cap \mathcal{R}_{c_u}^{(\rho)} \neq
+\emptyset$, the neighbor preservation error is lower bounded by
+\[
+    \bigl\|\Phi_{\hat\theta}(p_{c'}) -
+    \Phi_{\theta^*}(p_{c'})\bigr\|_2
+    \;\geq\;
+    \kappa(c_u,\delta) \cdot \Delta
+    \;-\; \delta,
+\]
+and consequently, $\gamma$-neighbor preservation
+(Definition~\ref{def:neighbor}) requires
+\[
+    \boxed{
+    \gamma \;\geq\; \kappa(c_u,\delta)\cdot\frac{1-\varepsilon}{L}
+    \;-\; \delta.
+    }
+\]
+In particular, achieving both $\varepsilon$-robustness and
+$\gamma$-neighbor preservation simultaneously requires
+\[
+    \varepsilon \;\geq\; 1 - \frac{L(\gamma + \delta)}{\kappa(c_u,\delta)}.
+\]
+\end{theorem}
+
+\begin{proof}
+We proceed in three steps.
+
+\medskip
+\noindent\textbf{Step 1: Required activation displacement for
+$\varepsilon$-robustness.}
+
+By Assumption~\ref{asm:lip}, for any prompt $p$ such that
+$\Phi_{\theta^*}(p) \in \mathcal{R}_{c_u}$, the original model
+generates concept $c_u$ with probability at least $1 - \varepsilon_0$
+for some baseline $\varepsilon_0 < \varepsilon$. To reduce this
+probability below $\varepsilon$ in the erased model, the activation
+must be displaced by at least
+\[
+    \bigl\|\Phi_{\hat\theta}(p) - \Phi_{\theta^*}(p)\bigr\|_2
+    \;\geq\; \frac{1 - \varepsilon}{L} \;=:\; \Delta,
+\]
+which is exactly the condition in Assumption~\ref{asm:edit}. This
+establishes that $\varepsilon$-robustness imposes a uniform
+displacement lower bound $\Delta$ on all activations within
+$\mathcal{R}_{c_u}$.
+
+\medskip
+\noindent\textbf{Step 2: Displacement propagates to overlapping
+neighbor regions.}
+
+Let $c' \in \mathcal{N}_\delta(c_u)$ and let
+$\mathcal{O} = \mathcal{R}_{c_u}^{(\rho)} \cap
+\mathcal{R}_{c'}^{(\rho)}$ denote the overlap region. By hypothesis,
+$\mathcal{O} \neq \emptyset$.
+
+Since the unlearning edit must displace all activations in
+$\mathcal{R}_{c_u}^{(\rho)}$ by at least $\Delta$ (from Step 1), and
+since $p_{c'}$ is chosen such that
+$\Phi_{\theta^*}(p_{c'}) \in \mathcal{R}_{c'}$, continuity of
+$\Phi_{\hat\theta}$ implies that the displacement at $p_{c'}$ is
+at least
+\[
+    \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta^*}(p_{c'})
+    \bigr\|_2
+    \;\geq\;
+    \frac{\mathrm{vol}(\mathcal{O})}{\mathrm{vol}(\mathcal{R}_{c_u}^{(\rho)})}
+    \cdot \Delta \;-\; d_\mathcal{Z}(\mathcal{R}_{c_u}, \mathcal{R}_{c'}).
+\]
+By Definition 2, $d_\mathcal{Z}(\mathcal{R}_{c_u},\mathcal{R}_{c'})
+< \delta$ for all $c' \in \mathcal{N}_\delta(c_u)$. Substituting the
+definition of $\kappa(c_u,\delta)$ yields
+\[
+    \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta^*}(p_{c'})
+    \bigr\|_2
+    \;\geq\;
+    \kappa(c_u,\delta) \cdot \Delta \;-\; \delta.
+\]
+
+\medskip
+\noindent\textbf{Step 3: Deriving the tradeoff inequality.}
+
+Substituting $\Delta = (1-\varepsilon)/L$ from Step 1:
+\[
+    \bigl\|\Phi_{\hat\theta}(p_{c'}) - \Phi_{\theta^*}(p_{c'})
+    \bigr\|_2
+    \;\geq\;
+    \kappa(c_u,\delta) \cdot \frac{1-\varepsilon}{L} \;-\; \delta.
+\]
+For $\gamma$-neighbor preservation (Definition~\ref{def:neighbor})
+to hold, we need the left-hand side to be less than $\gamma$, which
+requires
+\[
+    \gamma \;\geq\;
+    \kappa(c_u,\delta) \cdot \frac{1-\varepsilon}{L} \;-\; \delta.
+\]
+Rearranging for $\varepsilon$:
+\[
+    \kappa(c_u,\delta) \cdot \frac{1-\varepsilon}{L}
+    \;\leq\; \gamma + \delta
+    \quad\Longrightarrow\quad
+    1 - \varepsilon \;\leq\;
+    \frac{L(\gamma+\delta)}{\kappa(c_u,\delta)}
+    \quad\Longrightarrow\quad
+    \varepsilon \;\geq\;
+    1 - \frac{L(\gamma+\delta)}{\kappa(c_u,\delta)}.
+\]
+This completes the proof.
+\end{proof}
+
+\begin{corollary}[Impossibility of simultaneous perfect erasure
+and perfect preservation]
+\label{cor:impossibility}
+If $\kappa(c_u, \delta) > 0$ and $\delta < \kappa(c_u,\delta)/L$,
+then there is no unlearning method that simultaneously achieves
+$\varepsilon = 0$ (perfect erasure) and $\gamma = 0$ (perfect
+neighbor preservation).
+\end{corollary}
+
+\begin{proof}
+Setting $\varepsilon = 0$ in Theorem~\ref{thm:tradeoff} gives
+$\gamma \geq \kappa(c_u,\delta)/L - \delta > 0$ under the stated
+conditions. Hence $\gamma = 0$ is infeasible.
+\end{proof}
+
+\begin{remark}[Connection to STEREO's robustness mechanism]
+Theorem~\ref{thm:tradeoff} provides a formal explanation for why
+STEREO achieves robustness despite using only $K=2$ adversarial
+prompts in the STE stage. The learned token embeddings
+$v_1^*, v_2^*$ (Eq.~4 in \cite{stereo}) are not natural-language
+prompts but optimized vectors in $\mathcal{P}$ that lie near the
+hardest-to-suppress directions of $\mathcal{R}_{c_u}$. The REO
+compositional objective then suppresses the entire subspace spanned
+by these directions, effectively covering $\mathcal{R}_{c_u}$ with
+only two reference points. This broad suppression corresponds to
+a large $\Delta$ in Assumption~\ref{asm:edit}, which by
+Theorem~\ref{thm:tradeoff} directly implies large collateral
+displacement in $\mathcal{R}_{c'}$ for all
+$c' \in \mathcal{N}_\delta(c_u)$ with nonzero overlap
+$\kappa(c_u,\delta) > 0$. Our empirical observation that deer and
+zebra generation degrades after horse erasure (Section~3.2) is
+consistent with $\kappa(\texttt{horse}, \delta) > 0$ for these
+neighboring animal concepts.
+\end{remark}
+
+\begin{remark}[Tightness]
+The bound in Theorem~\ref{thm:tradeoff} is tight when the overlap
+region $\mathcal{O}$ is exactly $\kappa(c_u,\delta)$ fraction of
+$\mathcal{R}_{c_u}^{(\rho)}$ and the displacement field induced by
+the unlearning edit is uniform over $\mathcal{R}_{c_u}^{(\rho)}$.
+In practice, the displacement may be non-uniform (as suggested by
+the layer-wise cross-attention similarity results in
+Figure~\ref{fig:attn_similarity}), in which case the bound is
+conservative. Tightening it by characterizing the displacement
+geometry more precisely is left for future work.
+\end{remark}
